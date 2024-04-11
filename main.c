@@ -1,4 +1,5 @@
 #include "disk.h"
+#include "file.h"
 
 int main(const int argc, const char* argv[]) {
 	// Validate Arguments
@@ -8,11 +9,10 @@ int main(const int argc, const char* argv[]) {
 	}
 	// Setup
 	disk_s disk;
-	if (!open_disk(&disk,argv[1])) 
+	if (!disk_open(&disk,argv[1])) 
 		return 1;
-	// Testing
 	// Cleanup
-	if (close_disk(&disk))
+	if (disk_close(&disk))
 		return 1;
 
 	return 0;
