@@ -14,10 +14,11 @@ dnode_s* _disk_inode(const disk_s* disk, const uint16_t inum) {
 }
 const uint16_t _disk_inode_alloc(disk_s* disk) {
 	// Validate Inputs
-	if (!is_valid(disk,NULL))
+	char* err_str;
+	if (!is_valid(disk,err_str))
 		return -1;
 	// Query Inode Bitmap For Free Space
-	uint16_t inum = 0;
+	uint16_t inum = 3;
 	for (uint8_t* imap = &disk->mem_start[BLOCK_SIZE]; inum < IMAX(disk->info);++inum) {
 		if (!imap[inum/8]&(1<<(inum%8))) {
 			// Found Free Inode
@@ -26,22 +27,31 @@ const uint16_t _disk_inode_alloc(disk_s* disk) {
 		}
 	}
 	// No Free Inodes
-	printf("No Free Inodes");
-	return -1;
+	printf("No Free Inodes\n");
+	return 0;
 }
 bool _disk_inode_free(disk_s* disk,const uint16_t inum) {
 	// Validate Inputs
-	if (!is_valid(disk,NULL)) 
+	char* err_str;
+	if (!is_valid(disk,err_str)) {
+		printf("%s",err_str);
 		return false;
-	dnode_s* node = _disk_inode(disk,inum);
-	if (!node->type)
+	}
+	if (inum >= IMAX(disk->info)) {
+		printf("Invalid Index\n");
 		return false;
+	}
 	// Update Inode Bitmap
 	uint8_t* imap = &disk->mem_start[BLOCK_SIZE];
 	imap[inum/8]&=~(1<<(inum%8));
 	// Update Data Bitmap For All Data Blocks
 	uint8_t* dmap = &disk->mem_start[BLOCK_SIZE*2];
-	for (int i = 0;i<NDIRECT;++i)
+	dnode_s* node = _disk_inode(disk,inum);
+	for (int i = 0;i<(node->size>NDIRECT?node->size:NDIRECT);++i)
 		if (node->addr[i]>=0)
 			dmap[node->addr[i]/8]&=~(1<<(node->addr[i]%8));
+	// Free Indirect Data
+	if (node->size>NDIRECT) { 
+	}
+	return true;
 }

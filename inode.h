@@ -13,9 +13,9 @@ typedef struct inode_s {
 // On-Disk Inode Structure
 typedef struct dnode_s {
 	uint8_t  type; // 0 - Free / 1 - I_FILE / 2 - I_DIR
-	uint16_t size;
+	uint16_t size; // Number Of Blocks
 	uint8_t  ref_count;
-	uint32_t addr[NDIRECT+1];
+	uint16_t addr[NDIRECT+1];
 } dnode_s;
 #define IPB (BLOCK_SIZE/sizeof(dnode_s)) // Inodes Per Block
 #define IMAX(_superblock_) ((_superblock_).inode_size*IPB)

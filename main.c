@@ -11,6 +11,18 @@ int main(const int argc, const char* argv[]) {
 	disk_s disk;
 	if (!disk_open(&disk,argv[1])) 
 		return 1;
+	// Testing
+	for (int i = 4; i < IMAX(disk.info); ++i) {
+		printf("Freeing Inode %d...",i);
+		if (_disk_inode_free(&disk,i))
+			printf("Success\n");
+		else printf("Failed\n");
+	}
+//	for (int i = 0; i < 10; ++i) {
+//		printf("Allocating Inode...");
+//		uint16_t inum = _disk_inode_alloc(&disk);
+//		if (inum) printf("%hu\n",inum);
+//	}
 	// Cleanup
 	if (disk_close(&disk))
 		return 1;
