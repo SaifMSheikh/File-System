@@ -27,23 +27,10 @@ typedef struct disk_s {
 	size_t mem_size;       // Size Of Allocated Memory Block
 	FILE* file;	       // "Disk" File Descriptor
 } disk_s;
-// On-Disk Directory Structure
-typedef struct dirent_s {
-	// Total Size Will Be (DIR_SIZE * 8) + 16 = 16 * 16 bytes When DIR_SIZE = 14
-	uint16_t inode;
-	char name[DIR_SIZE];
-} dirent_s;
-// On-Disk Inode Structure
-typedef struct dnode_s {
-	uint16_t type;
-	uint32_t size;
-	uint32_t address[NDIRECT+1];
-} dnode_s;
-#define IPB (BLOCK_SIZE/sizeof(dnode_s)) // Inodes Per Block
-#define IBLOCK(_inum_,_superblock_) ((_inum_)/IPB+_superblock_.inode_start) // Block Containing Inode #_inum_
+// Public Disk Interface
 bool is_valid(const disk_s*,const char*);
 bool disk_open(disk_s*,const char*);
 bool disk_close(disk_s*);
-superblock_s disk_info(const disk_s*);
-
+// Protected Disk Interface
+superblock_s _disk_info(const disk_s*);
 #endif

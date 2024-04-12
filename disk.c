@@ -14,7 +14,7 @@ bool is_valid(const disk_s* disk, const char* err_str) {
 	return strcmp(err_str,"") == 0;
 }
 // Read Disk File Header (Superblock)
-superblock_s disk_info(const disk_s* disk) {
+superblock_s _disk_info(const disk_s* disk) {
 	printf("Reading Filesystem Data...");
 	superblock_s superblock;
 	const uint32_t* header = (const uint32_t*)disk->mem_start;
@@ -74,7 +74,7 @@ bool disk_open(disk_s* disk, const char* file_name) {
 		return false;
 	}
 	// Populate Superblock Struct
-	disk->info = disk_info(disk);
+	disk->info = _disk_info(disk);
 	return true;
 }
 // Cleanup Disk Struct (Becomes Invalid)
@@ -105,6 +105,3 @@ bool disk_close(disk_s* disk) {
 	free(disk->mem_start);
 	fclose(disk->file);
 }
-// Get Inode Address From ID
-dnode_s* disk_inode(disk_s* disk, uint16_t inum) 
-{ return (dnode_s*)disk->mem_start[IBLOCK(inum,disk->info) + (inum * sizeof(dnode_s))]; }

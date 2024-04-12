@@ -1,5 +1,5 @@
 #include "disk.h"
-#include "file.h"
+#include "inode.h"
 
 int main(const int argc, const char* argv[]) {
 	// Validate Arguments
