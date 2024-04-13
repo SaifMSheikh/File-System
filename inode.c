@@ -15,12 +15,14 @@ dnode_s* _disk_inode(const disk_s* disk, const uint16_t inum) {
 const uint16_t _disk_inode_alloc(disk_s* disk) {
 	// Validate Inputs
 	char* err_str;
-	if (!is_valid(disk,err_str))
-		return -1;
+	if (!is_valid(disk,err_str)) {
+		printf("%s",err_str);
+		return IMAX(disk->info);
+	}
 	// Query Inode Bitmap For Free Space
-	uint16_t inum = 3;
+	uint16_t inum = 0;
 	for (uint8_t* imap = &disk->mem_start[BLOCK_SIZE]; inum < IMAX(disk->info);++inum) {
-		if (!imap[inum/8]&(1<<(inum%8))) {
+		if (!(imap[inum/8]&(1<<(inum%8)))) {
 			// Found Free Inode
 			imap[inum/8]|=(1<<(inum%8));
 			return inum;
@@ -28,7 +30,7 @@ const uint16_t _disk_inode_alloc(disk_s* disk) {
 	}
 	// No Free Inodes
 	printf("No Free Inodes\n");
-	return 0;
+	return IMAX(disk->info);
 }
 bool _disk_inode_free(disk_s* disk,const uint16_t inum) {
 	// Validate Inputs
