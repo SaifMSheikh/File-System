@@ -57,3 +57,32 @@ bool _disk_inode_free(disk_s* disk,const uint16_t inum) {
 	}
 	return true;
 }
+// Create Inode
+inode_s _inode_create(disk_s* disk) {
+	inode_s node;
+	node.valid=false;
+	// Validate Input
+	char* err_str;
+	if (!is_valid(disk,err_str)) {
+		printf("%s",err_str);
+		return node;;
+	}
+	// Allocate Disk Space & Populate Inode Structure
+	node.dev=disk;
+	node.inum=_disk_inode_alloc(disk);
+	node.info=_disk_inode(disk,node.inum);
+	// Validate Inode Struct
+	if (node.inum<IMAX(disk->info)&&node.info!=NULL)
+		return node;
+}
+// Release Inode
+bool _inode_destroy(inode_s* inode) {
+	// Validate Input
+	if (!inode->valid) {
+		printf("Invalid Inode\n");
+		return false;
+	}
+	// Free Disk Space
+	inode->valid=false;
+	return _disk_inode_free(inode->dev,inode->inum);
+}

@@ -5,7 +5,7 @@
 struct dnode_s;
 // Logical Index Node Structure
 typedef struct inode_s {
-	struct dnode_s* const info;
+	struct dnode_s* info;
 	disk_s*  dev;
 	uint16_t inum;
 	bool     valid;
@@ -30,5 +30,8 @@ typedef struct dirent_s {
 dnode_s*       _disk_inode(const disk_s*,const uint16_t);
 bool           _disk_inode_free( disk_s*,const uint16_t);
 const uint16_t _disk_inode_alloc(disk_s*);
+// Inode Operations
+inode_s _inode_create(disk_s*);
+bool    _inode_destroy(inode_s*);
 
 #endif

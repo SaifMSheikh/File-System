@@ -20,8 +20,8 @@ int main(const int argc, const char* argv[]) {
 	}
 //	for (int i = 0; i < 10; ++i) {
 //		printf("Allocating Inode...");
-//		uint16_t inum = _disk_inode_alloc(&disk);
-//		if (inum!=IMAX(disk.info)) printf("%hu\n",inum);
+//		inode_s inode = _inode_create(&disk);
+//		if (!inode.valid) printf("%hu\n",inode.inum);
 //		else printf("Failed\n");
 //	}
 	// Cleanup
