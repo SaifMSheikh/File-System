@@ -6,7 +6,6 @@
 #include <stdio.h>
 
 #define BLOCK_SIZE (4 * 1024) // Size Of Each Logical Segment Of The Disk
-#define DIR_SIZE 14
 // Maximum File Direct & Indirect Pointers
 #define NDIRECT 12
 #define NINDIRECT (BLOCK_SIZE / 4)

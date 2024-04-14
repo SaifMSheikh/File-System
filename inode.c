@@ -57,7 +57,21 @@ bool _disk_inode_free(disk_s* disk,const uint16_t inum) {
 	}
 	return true;
 }
-// Create Inode
+// Get Allocated Inode
+inode_s _inode_get(disk_s* disk,const uint16_t inum) {
+	// Populate Inode Struct
+	inode_s node;
+	node.valid=false;
+	node.inum=inum;
+	node.dev=disk;
+	// Get Disk-Allocated Node
+	node.info=_disk_inode(disk,inum);
+	// Validate Structure
+	if (node.inum<IMAX(disk->info))
+		node.valid=true;
+	return node;
+}
+// Allocate New Inode
 inode_s _inode_create(disk_s* disk) {
 	inode_s node;
 	node.valid=false;
