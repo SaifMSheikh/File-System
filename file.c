@@ -1,7 +1,9 @@
-#include "file.h"
 #include <string.h>
+#include "inode.h"
+#include "file.h"
+#include "disk.h"
 
-const uint16_t dir_lookup(inode_s* dir,char* target_path) {
+uint16_t dir_lookup(inode_s* dir,char* target_path) {
 	// Validate Inputs
 	if (!dir->valid||dir->info->type!=I_DIRE) {
 		printf("Invalid Root Inode");
@@ -40,7 +42,7 @@ const uint16_t dir_lookup(inode_s* dir,char* target_path) {
 	// Not Found
 	return IMAX(dir->dev->info);
 }
-const uint16_t dir_create(inode_s* dir,char* path) {
+uint16_t dir_create(inode_s* dir,char* path) {
 	// Validate Input
 	if (!dir->valid) {
 		printf("Invalid Inode\n");

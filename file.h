@@ -18,6 +18,7 @@ typedef struct dirent_s {
 	char name[DIRENT_NAME_LEN];
 } dirent_s;
 // Directory Operations
-inode_s* dirlookup(inode_s* dir,char* target_name);
+uint16_t dir_lookup(inode_s*,char*);
+uint16_t dir_create(inode_s*,char*);
 
 #endif
