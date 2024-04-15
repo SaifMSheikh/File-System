@@ -8,7 +8,7 @@
 #define BLOCK_SIZE (4 * 1024) // Size Of Each Logical Segment Of The Disk
 // Maximum File Direct & Indirect Pointers
 #define NDIRECT 12
-#define NINDIRECT (BLOCK_SIZE / 4)
+#define NINDIRECT (BLOCK_SIZE / sizeof(uint16_t))
 #define MAX_FILE NDIRECT + NINDIRECT
 // Disk Superblock (File Header)
 typedef struct superblock_s {

@@ -2,7 +2,7 @@
 #include "inode.h"
 #include "file.h"
 #include "disk.h"
-
+// Find Directory, Given Parent & Relative Path
 uint16_t dir_lookup(inode_s* dir,char* target_path) {
 	// Validate Inputs
 	if (!dir->valid||dir->info->type!=I_DIRE) {
@@ -10,38 +10,55 @@ uint16_t dir_lookup(inode_s* dir,char* target_path) {
 		return IMAX(dir->dev->info);
 	}
 	// Parse Target Path For Subdirectory
-	char* sub_path="";
-	char* next_name="";
-	for (int i=0;target_path[i]!='\0';++i) {
+	char sub_path[255]="\0";
+	char next_name[DIRENT_NAME_LEN]="\0";
+	for (int i=0;i<strlen(target_path);++i) {
 		if (target_path[i]=='/') {
-			memcpy(sub_path,&target_path[i+1],strlen(target_path)-i+1);
-			memcpy(next_name,target_path,i);
+			strncpy(sub_path,&target_path[i+1],strlen(target_path)-i+1);
+			sub_path[strlen(target_path)-i+1]='\0';
+			strncpy(next_name,target_path,i);
+			next_name[i]='\0';
 			break;
 		}
 	}
 	// If Found, Search Next Directory
-	if (strcmp(sub_path,"")) {
+	if (sub_path[0]!='\0') {
 		// Find Next Directory's Entry
+		inode_s next_dir;
+		next_dir.valid=false;
+		// 1 - Search Direct Data
 		dirent_s* entry=(dirent_s*)dir->info->addr;
-		for (int i=0;(i<dir->info->size)&&(i<NENTRY);++i) {
-			if (!strcmp(entry[i].name,next_name)) {
-				inode_s next_dir=_inode_get(dir->dev,entry[i].inum);
-				return dir_lookup(&next_dir,sub_path);
-			}
-		}
+		for (int i=0;(i<dir->info->size)&&(i<NDIRENT_DIRECT);++i) 
+			if (!strcmp(entry[i].name,next_name)) 
+				next_dir=_inode_get(dir->dev,entry[i].inum);
+		// 2 - Search Indirect Data
+		entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+dir->info->addr[NDIRENT_DIRECT])]);
+		for (int i=0;i<(dir->info->size-NDIRENT_DIRECT);++i)
+			if (!strcmp(entry[i].name,next_name)) 
+				next_dir=_inode_get(dir->dev,entry[i].inum);
+		// Search Next Directory If Found
+		if (next_dir.valid)
+			return dir_lookup(&next_dir,sub_path);
 		// Not Found
 		printf("Directory Not Found : %s\n",next_name);
 		return IMAX(dir->dev->info);
 	}
 	// Otherwise, Search For Match
 	dirent_s* entry=(dirent_s*)dir->info->addr;
-	for (int i=0;(i<dir->info->size)&&(1<NENTRY);++i) {
+	// 1 - Search Direct Data
+	for (int i=0;(i<dir->info->size)&&(i<NDIRENT_DIRECT);++i)
 		if (!strcmp(entry[i].name,target_path))
 			return entry[i].inum;
-	}
+	// 2 - Search Indirect Data
+	int size=(int)dir->info->size-NDIRENT_DIRECT;
+	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+dir->info->addr[NDIRENT_DIRECT])]);
+	for(int i=0;(i<size)&&(i<NDIRENT_INDIRECT);++i)
+		if (!strcmp(entry[i].name,target_path))
+			return entry[i].inum;
 	// Not Found
 	return IMAX(dir->dev->info);
 }
+// Create Directory At Relative Path From Parent
 uint16_t dir_create(inode_s* dir,char* path) {
 	// Validate Input
 	if (!dir->valid) {
@@ -56,8 +73,8 @@ uint16_t dir_create(inode_s* dir,char* path) {
 	char* target_name="";
 	for(int i=strlen(path)-1;i>=0;--i) {
 		if (path[i]=='/') {
-			memcpy(parent_path,path,i);
-			memcpy(target_name,&path[i+1],strlen(path)-i+1);
+			strncpy(parent_path,path,i);
+			strncpy(target_name,&path[i+1],strlen(path)-i+1);
 			break;
 		}
 	}
@@ -75,14 +92,21 @@ uint16_t dir_create(inode_s* dir,char* path) {
 	if (parent_dir==NULL)
 		return IMAX(dir->dev->info);
 	// Update Parent Directory Data
-	if (parent_dir->size>=NENTRY) {
+	if (parent_dir->size>=NDIRENT) {
 		printf("Parent Directory (%s) Full\n",parent_path);
 		return IMAX(dir->dev->info);
 	}
-	parent_dir->size++;
-	dirent_s* entry=(dirent_s*)parent_dir->addr;
-	entry+=parent_dir->size;
+	dirent_s* entry;
+	if (parent_dir->size<NDIRENT_DIRECT) {
+		// Update Direct Data
+		entry=(dirent_s*)&(parent_dir->addr[parent_dir->size]);
+	} else {
+		// Update Indirect Data
+		entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+parent_dir->addr[NDIRENT_DIRECT])]);
+		entry+=(parent_dir->size-NDIRENT_DIRECT);
+	}
 	strcpy(entry->name,target_name);
+	parent_dir->size++;
 	// Allocate Disk Space
 	entry->inum=_disk_inode_alloc(dir->dev);
 	return entry->inum;
