@@ -110,8 +110,8 @@ void _dir_print(const inode_s* dir,const bool recursive,const uint8_t depth) {
 	// Print Indirect Data
 	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*dir->info->addr)]);
 	for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i) {
-		for (int i=0;i<depth;++i)
-			printf("\t");
+		for (int i=0;i<=depth;++i)
+			printf("\n\t");
 		printf("%s",entry[i].name);
 		if (recursive) {
 			node=_inode_get(dir->dev,entry[i].inum);
@@ -119,5 +119,6 @@ void _dir_print(const inode_s* dir,const bool recursive,const uint8_t depth) {
 				_dir_print(&node,recursive,depth+1);
 		}
 	}
+	printf("\n");
 }
 void dir_print(const inode_s* dir,const bool recursive) { _dir_print(dir,recursive,0); }
