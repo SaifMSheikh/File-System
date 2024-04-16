@@ -10,6 +10,7 @@ typedef struct file_s {
 	uint8_t ref_count;
 	bool readable;
 	bool writable;
+	bool valid;
 } file_s;
 // On-Disk Directory Structure
 typedef struct dirent_s {
@@ -17,9 +18,9 @@ typedef struct dirent_s {
 	char name[DIRENT_NAME_LEN];
 } dirent_s;
 // Directory Operations
-uint16_t dir_lookup(inode_s*,char*);
-inode_s  dir_create(inode_s*,char*);
-bool     dir_destroy(inode_s*,char*);
+uint16_t dir_lookup(const inode_s*,const char*);
 void     dir_print(const inode_s*);
+inode_s  dir_create(const inode_s*,const char*);
+bool     dir_destroy(const inode_s*,const char*);
 
 #endif

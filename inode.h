@@ -2,10 +2,15 @@
 #define INODE_H
 
 #include "disk.h"
-struct dnode_s;
+// File Types
 #define I_FREE 0
 #define I_FILE 1
 #define I_DIRE 2
+// Inode Utilities
+#define IPB (BLOCK_SIZE/sizeof(dnode_s)) // Inodes Per Block
+#define IMAX(_superblock_) ((_superblock_).inode_size*IPB)
+#define IBLOCK(_inum_,_superblock_) ((_inum_)/IPB+_superblock_.inode_start) // Block Containing Inode #_inum_
+struct dnode_s;
 // Logical Index Node Structure
 typedef struct inode_s {
 	struct dnode_s* info;
@@ -20,9 +25,7 @@ typedef struct dnode_s {
 	uint8_t  ref_count;
 	uint16_t addr[NDIRECT+1];
 } dnode_s;
-#define IPB (BLOCK_SIZE/sizeof(dnode_s)) // Inodes Per Block
-#define IMAX(_superblock_) ((_superblock_).inode_size*IPB)
-#define IBLOCK(_inum_,_superblock_) ((_inum_)/IPB+_superblock_.inode_start) // Block Containing Inode #_inum_
+
 // DNode Operations
 dnode_s*       _disk_inode(const disk_s*,const uint16_t);
 bool           _disk_inode_free(const disk_s*,const uint16_t);

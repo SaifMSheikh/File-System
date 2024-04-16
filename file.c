@@ -4,7 +4,7 @@
 #include "file.h"
 #include "disk.h"
 // Find Directory, Given Parent & Relative Path
-uint16_t dir_lookup(inode_s* dir,char* target_path) {
+uint16_t dir_lookup(const inode_s* dir,const char* target_path) {
 	// Validate Inputs
 	if (!dir->valid||dir->info->type!=I_DIRE) {
 		printf("Invalid Root Inode");
@@ -50,7 +50,7 @@ uint16_t dir_lookup(inode_s* dir,char* target_path) {
 	return IMAX(dir->dev->info);
 }
 // Create Directory At Relative Path From Parent
-inode_s dir_create(inode_s* dir,char* path) {
+inode_s dir_create(const inode_s* dir,const char* path) {
 	inode_s node;
 	node.valid=false;
 	// Validate Input
@@ -123,7 +123,7 @@ void dir_print(const inode_s* dir) {
 		printf("\n%s",entry[i].name);
 	printf("\n");
 }
-bool dir_destroy(inode_s* dir,char* path) {
+bool dir_destroy(const inode_s* dir,const char* path) {
 	// Get Target Directory
 	inode_s target_dir=_inode_get(dir->dev,dir_lookup(dir,path));
 	if (!target_dir.valid) { 
