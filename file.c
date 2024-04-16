@@ -28,7 +28,7 @@ uint16_t dir_lookup(inode_s* dir,char* target_path) {
 		inode_s next_dir;
 		next_dir.valid=false;
 		// Search Indirect Data
-		dirent_s* entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*dir->info->addr)]);
+		dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,dir->info->addr[0]);
 		for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i)
 			if (!strcmp(entry[i].name,next_name)) 
 				next_dir=_inode_get(dir->dev,entry[i].inum);
@@ -42,7 +42,7 @@ uint16_t dir_lookup(inode_s* dir,char* target_path) {
 	// Otherwise, Search For Match
 	dirent_s* entry=(dirent_s*)dir->info->addr;
 	// Search Indirect Data
-	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*dir->info->addr)]);
+	entry=(dirent_s*)_disk_data_get(dir->dev,dir->info->addr[0]);
 	for(int i=0;(i<dir->info->size)&&(i<NDIRENT);++i)
 		if (!strcmp(entry[i].name,target_path))
 			return entry[i].inum;
@@ -96,7 +96,7 @@ inode_s dir_create(inode_s* dir,char* path) {
 		return node;
 	}
 	// Update Indirect Data
-	dirent_s* entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+parent_dir.info->addr[0])]);
+	dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,parent_dir.info->addr[0]);
 	strcpy(entry[parent_dir.info->size++].name,target_name);
 	// Allocate Disk Space
 	node=_inode_create(dir->dev,I_DIRE);

@@ -61,7 +61,7 @@ bool _disk_inode_free(const disk_s* disk,const uint16_t inum) {
 	// Free Indirect Data
 	if (node->size>NDIRECT) { 
 		int size=node->size-NDIRECT;
-		uint16_t* entry=(uint16_t*)&(disk->mem_start[BLOCK_SIZE*(disk->info.data_start+node->addr[NDIRECT])]);
+		uint16_t* entry=(uint16_t*)_disk_data_get(disk,node->addr[NDIRECT]);
 		for (int i=0;(i<size)&&(i<NINDIRECT);++i)
 			dmap[entry[i]/8]&=~(1<<(entry[i]%8));
 	}
