@@ -1,3 +1,4 @@
+// #define NDEBUG
 #include <string.h>
 #include "inode.h"
 #include "file.h"
@@ -95,30 +96,25 @@ uint16_t dir_create(inode_s* dir,char* path) {
 	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*parent_dir->addr)]);
 	strcpy(entry[parent_dir->size++].name,target_name);
 	// Allocate Disk Space
-	entry->inum=_disk_inode_alloc(dir->dev);
+	inode_s node=_inode_create(dir->dev,I_DIRE);
+	if (!node.valid)
+		return IMAX(dir->dev->info);
+	entry->inum=node.inum;
 	return entry->inum;
 }
-void _dir_print(const inode_s* dir,const bool recursive,const uint8_t depth) {
+void dir_print(const inode_s* dir) {
 	// Validate Input
 	if (!dir->valid||dir->info->type!=I_DIRE) {
 		printf("Invalid Root Node\n");
 		return;
 	}
 	// Print Entries
-	dirent_s* entry;
 	inode_s   node;
-	// Print Indirect Data
-	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*dir->info->addr)]);
-	for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i) {
-		for (int i=0;i<=depth;++i)
-			printf("\n\t");
-		printf("%s",entry[i].name);
-		if (recursive) {
-			node=_inode_get(dir->dev,entry[i].inum);
-			if (node.info->type==I_DIRE)
-				_dir_print(&node,recursive,depth+1);
-		}
-	}
+	dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,dir->info->addr[0]);
+	for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i) 
+		printf("\n%s",entry[i].name);
 	printf("\n");
 }
-void dir_print(const inode_s* dir,const bool recursive) { _dir_print(dir,recursive,0); }
+void dir_destroy(inode_s* dir,char* path) {
+
+}

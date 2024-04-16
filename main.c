@@ -2,7 +2,7 @@
 #include "inode.h"
 #include "file.h"
 
-void test_reset(disk_s* disk) {
+bool test_reset(disk_s* disk) {
 	printf("Freeing %ld Inodes:\n",IMAX(disk->info));
 	for (int i=0;i<IMAX(disk->info);++i) {
 		printf("Freeing Inode %d...",i);
@@ -17,6 +17,13 @@ void test_reset(disk_s* disk) {
 			printf("Success\n");
 		else printf("Failed\n");
 	}
+	printf("Allocating Root Directory...");
+	inode_s root=_inode_create(disk,I_DIRE);
+	if (!root.valid) {
+		printf("Failed\n");
+		return false;
+	}
+	return true;
 }
 
 int main(const int argc, const char* argv[]) {
@@ -30,8 +37,13 @@ int main(const int argc, const char* argv[]) {
 	if (!disk_open(&disk,argv[1])) 
 		return 1;
 	// Testing
+	if (!test_reset(&disk))
+		return 1;
 	inode_s root=_inode_get(&disk,0);
-	dir_print(&root,false);
+	dir_create(&root,"Saif");
+	dir_print(&root);
+	dir_destroy(&root,"Saif");
+	dir_print(&root);
 //	
 //	for (int i = 0; i < 10; ++i) {
 //		printf("Allocating Inode...");

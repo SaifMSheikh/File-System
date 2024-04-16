@@ -142,5 +142,5 @@ bool _inode_destroy(inode_s* inode) {
 		}
 	};
 	// Free Disk Space
-	return _disk_inode_free(inode->dev,inode->inum);
+//	return _disk_inode_free(inode->dev,inode->inum);
 }

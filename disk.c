@@ -39,9 +39,10 @@ bool disk_open(disk_s* disk, const char* file_name) {
 	// Open Disk File
 	disk->file = fopen(file_name,"r+");
 	if (disk->file == NULL) {
-		printf("Failed To Open %s",disk->file_name);
+		printf("Failed To Open %s",file_name);
 		return false;
 	}
+	disk->file_name=file_name;
 	// Get File Size
 	fseek(disk->file,0,SEEK_END);
 	disk->mem_size = ftell(disk->file);

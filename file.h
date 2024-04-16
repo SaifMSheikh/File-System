@@ -19,7 +19,7 @@ typedef struct dirent_s {
 // Directory Operations
 uint16_t dir_lookup(inode_s*,char*);
 uint16_t dir_create(inode_s*,char*);
-void     dir_print(const inode_s*,const bool);
-void    _dir_print(const inode_s*,const bool,const uint8_t);
+bool     dir_destroy(inode_s*,char*);
+void     dir_print(const inode_s*);
 
 #endif
