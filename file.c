@@ -107,7 +107,9 @@ inode_s dir_create(const inode_s* dir,const char* path) {
 	entry=(dirent_s*)_disk_data_get(node.dev,node.info->addr[0]);
 	strcpy(entry[0].name,"..");
 	entry[0].inum=parent_dir.inum;
-	node.info->size++;
+	strcpy(entry[1].name,".");
+	entry[1].inum=node.inum;
+	node.info->size+=2;
 	return node;
 }
 void dir_print(const inode_s* dir) {
