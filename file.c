@@ -77,29 +77,34 @@ uint16_t dir_create(inode_s* dir,char* path) {
 		return IMAX(dir->dev->info);
 	}
 	// If Not Found, Use Current Directory As Parent
-	dnode_s* parent_dir;
+	inode_s parent_dir;
 	if (!strcmp(parent_path,"")) {
-		parent_dir=dir->info;
+		parent_dir=*dir;
 		strcpy(target_name,path);
 	}
 	// Otherwise, Fetch Parent Directory
-	else parent_dir=_disk_inode(dir->dev,dir_lookup(dir,parent_path));
-	if (parent_dir==NULL)
+	else parent_dir=_inode_get(dir->dev,dir_lookup(dir,parent_path));
+	if (!parent_dir.valid)
 		return IMAX(dir->dev->info);
 	// Update Parent Directory Data
-	if (parent_dir->size>=NDIRENT) {
+	if (parent_dir.info->size>=NDIRENT) {
 		printf("Parent Directory (%s) Full\n",parent_path);
 		return IMAX(dir->dev->info);
 	}
 	dirent_s* entry;
 	// Update Indirect Data
-	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*parent_dir->addr)]);
-	strcpy(entry[parent_dir->size++].name,target_name);
+	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+parent_dir.info->addr[0])]);
+	strcpy(entry[parent_dir.info->size++].name,target_name);
 	// Allocate Disk Space
 	inode_s node=_inode_create(dir->dev,I_DIRE);
 	if (!node.valid)
 		return IMAX(dir->dev->info);
 	entry->inum=node.inum;
+	// Add Parent Directory Reference
+	entry=(dirent_s*)_disk_data_get(node.dev,node.info->addr[0]);
+	strcpy(entry[0].name,"..");
+	entry[0].inum=parent_dir.inum;
+	node.info->size++;
 	return entry->inum;
 }
 void dir_print(const inode_s* dir) {
@@ -115,6 +120,30 @@ void dir_print(const inode_s* dir) {
 		printf("\n%s",entry[i].name);
 	printf("\n");
 }
-void dir_destroy(inode_s* dir,char* path) {
-
+bool dir_destroy(inode_s* dir,char* path) {
+	// Get Target Directory
+	inode_s target_dir=_inode_get(dir->dev,dir_lookup(dir,path));
+	if (!target_dir.valid) { 
+		printf("Failed To Fetch Target Directory\n");
+		return false;
+	}
+	// Update Parent Directory
+	inode_s parent_dir=_inode_get(dir->dev,dir_lookup(&target_dir,".."));
+	if (!parent_dir.valid) {
+		printf("Failed To Fetch Parent Directory\n");
+		return false;
+	}
+	int i;
+	dirent_s* entry=(dirent_s*)_disk_data_get(parent_dir.dev,parent_dir.info->addr[0]);
+	for (i=0;i<parent_dir.info->size;++i) {
+		if (entry[i].inum==target_dir.inum) {
+			// Realign Array
+			for (int j=i+1;j<parent_dir.info->size;++j)
+				memmove(&entry[i],&entry[j],(parent_dir.info->size-j)*sizeof(dirent_s));
+			parent_dir.info->size--;
+			break;
+		}
+	}
+	// Free Resources
+	return _inode_destroy(&target_dir);
 }
