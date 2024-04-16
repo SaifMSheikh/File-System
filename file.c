@@ -26,14 +26,9 @@ uint16_t dir_lookup(inode_s* dir,char* target_path) {
 		// Find Next Directory's Entry
 		inode_s next_dir;
 		next_dir.valid=false;
-		// 1 - Search Direct Data
-		dirent_s* entry=(dirent_s*)dir->info->addr;
-		for (int i=0;(i<dir->info->size)&&(i<NDIRENT_DIRECT);++i) 
-			if (!strcmp(entry[i].name,next_name)) 
-				next_dir=_inode_get(dir->dev,entry[i].inum);
-		// 2 - Search Indirect Data
-		entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+dir->info->addr[NDIRENT_DIRECT])]);
-		for (int i=0;i<(dir->info->size-NDIRENT_DIRECT);++i)
+		// Search Indirect Data
+		dirent_s* entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*dir->info->addr)]);
+		for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i)
 			if (!strcmp(entry[i].name,next_name)) 
 				next_dir=_inode_get(dir->dev,entry[i].inum);
 		// Search Next Directory If Found
@@ -45,14 +40,9 @@ uint16_t dir_lookup(inode_s* dir,char* target_path) {
 	}
 	// Otherwise, Search For Match
 	dirent_s* entry=(dirent_s*)dir->info->addr;
-	// 1 - Search Direct Data
-	for (int i=0;(i<dir->info->size)&&(i<NDIRENT_DIRECT);++i)
-		if (!strcmp(entry[i].name,target_path))
-			return entry[i].inum;
-	// 2 - Search Indirect Data
-	int size=(int)dir->info->size-NDIRENT_DIRECT;
-	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+dir->info->addr[NDIRENT_DIRECT])]);
-	for(int i=0;(i<size)&&(i<NDIRENT_INDIRECT);++i)
+	// Search Indirect Data
+	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*dir->info->addr)]);
+	for(int i=0;(i<dir->info->size)&&(i<NDIRENT);++i)
 		if (!strcmp(entry[i].name,target_path))
 			return entry[i].inum;
 	// Not Found
@@ -69,8 +59,8 @@ uint16_t dir_create(inode_s* dir,char* path) {
 	if (dir_lookup(dir,path)!=IMAX(dir->dev->info))
 		return IMAX(dir->dev->info);
 	// Get Parent Directory & Relative Path
-	char* parent_path="";
-	char* target_name="";
+	char parent_path[255]="";
+	char target_name[DIRENT_NAME_LEN]="";
 	for(int i=strlen(path)-1;i>=0;--i) {
 		if (path[i]=='/') {
 			strncpy(parent_path,path,i);
@@ -85,8 +75,10 @@ uint16_t dir_create(inode_s* dir,char* path) {
 	}
 	// If Not Found, Use Current Directory As Parent
 	dnode_s* parent_dir;
-	if (!strcmp(parent_path,""))
+	if (!strcmp(parent_path,"")) {
 		parent_dir=dir->info;
+		strcpy(target_name,path);
+	}
 	// Otherwise, Fetch Parent Directory
 	else parent_dir=_disk_inode(dir->dev,dir_lookup(dir,parent_path));
 	if (parent_dir==NULL)
@@ -97,17 +89,34 @@ uint16_t dir_create(inode_s* dir,char* path) {
 		return IMAX(dir->dev->info);
 	}
 	dirent_s* entry;
-	if (parent_dir->size<NDIRENT_DIRECT) {
-		// Update Direct Data
-		entry=(dirent_s*)&(parent_dir->addr[parent_dir->size]);
-	} else {
-		// Update Indirect Data
-		entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+parent_dir->addr[NDIRENT_DIRECT])]);
-		entry+=(parent_dir->size-NDIRENT_DIRECT);
-	}
-	strcpy(entry->name,target_name);
-	parent_dir->size++;
+	// Update Indirect Data
+	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*parent_dir->addr)]);
+	strcpy(entry[parent_dir->size++].name,target_name);
 	// Allocate Disk Space
 	entry->inum=_disk_inode_alloc(dir->dev);
+	printf("Allocated %s At Inode %u",entry[parent_dir->size-1].name,entry[parent_dir->size-1].inum);
 	return entry->inum;
 }
+void _dir_print(const inode_s* dir,const bool recursive,const uint8_t depth) {
+	// Validate Input
+	if (!dir->valid||dir->info->type!=I_DIRE) {
+		printf("Invalid Root Node\n");
+		return;
+	}
+	// Print Entries
+	dirent_s* entry;
+	inode_s   node;
+	// Print Indirect Data
+	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+*dir->info->addr)]);
+	for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i) {
+		for (int i=0;i<depth;++i)
+			printf("\t");
+		printf("%s",entry[i].name);
+		if (recursive) {
+			node=_inode_get(dir->dev,entry[i].inum);
+			if (node.info->type==I_DIRE)
+				_dir_print(&node,recursive,depth+1);
+		}
+	}
+}
+void dir_print(const inode_s* dir,const bool recursive) { _dir_print(dir,recursive,0); }
