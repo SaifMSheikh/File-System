@@ -105,3 +105,52 @@ bool disk_close(disk_s* disk) {
 	free(disk->mem_start);
 	fclose(disk->file);
 }
+// Get Data Block From Memory
+uint8_t* _disk_data_get(const disk_s* disk,const uint16_t bnum) {
+	// Validate Inputs
+	char* err_str;
+	if (!is_valid(disk,err_str)) {
+		printf("%s",err_str);
+		return NULL;
+	}
+	if (bnum>=disk->info.data_size) {
+		printf("Invalid Block Number\n");
+		return NULL;
+	}
+	// Get Data
+	return &disk->mem_start[BLOCK_SIZE*(disk->info.data_start+bnum)];
+}
+// Allocate Data Block
+uint16_t _disk_data_alloc(const disk_s* disk) {
+	// Validate Input
+	char* err_str;
+	if (!is_valid(disk,err_str)) {
+		printf("%s",err_str);
+		return disk->info.data_size;
+	}
+	// Query Data Bitmap For Free Block
+	uint8_t* dmap=&disk->mem_start[BLOCK_SIZE*2];
+	for (int bnum=0;bnum<disk->info.data_size;++bnum) {
+		if (!(dmap[bnum/8]&(1<<(bnum%8)))) {
+			dmap[bnum/8]|=(1<<(bnum%8));
+			return bnum;
+		}
+	}
+}
+// Free Allocated Data Block
+bool _disk_data_free(const disk_s* disk,const uint16_t bnum) {
+	// Validate Input
+	char* err_str;
+	if (!is_valid(disk,err_str)) {
+		printf("%s",err_str);
+		return false;
+	}
+	if (bnum>=disk->info.data_size) {
+		printf("Invalid Block Number\n");
+		return false;
+	}
+	// Update Data Bitmap
+	uint8_t* dmap=&disk->mem_start[BLOCK_SIZE*2];
+	dmap[bnum/8]&=~(1<<(bnum%8));
+	return true;
+}

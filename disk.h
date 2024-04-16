@@ -32,4 +32,7 @@ bool disk_open(disk_s*,const char*);
 bool disk_close(disk_s*);
 // Protected Disk Interface
 superblock_s _disk_info(const disk_s*);
+uint8_t* _disk_data_get(const disk_s*,const uint16_t);
+uint16_t _disk_data_alloc(const disk_s*);
+bool _disk_data_free(const disk_s*,const uint16_t);
 #endif
