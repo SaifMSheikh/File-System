@@ -25,11 +25,11 @@ typedef struct dnode_s {
 #define IBLOCK(_inum_,_superblock_) ((_inum_)/IPB+_superblock_.inode_start) // Block Containing Inode #_inum_
 // DNode Operations
 dnode_s*       _disk_inode(const disk_s*,const uint16_t);
-bool           _disk_inode_free( disk_s*,const uint16_t);
-const uint16_t _disk_inode_alloc(disk_s*);
+bool           _disk_inode_free(const disk_s*,const uint16_t);
+const uint16_t _disk_inode_alloc(const disk_s*);
 // Inode Operations
 inode_s _inode_get(disk_s*,const uint16_t);
-inode_s _inode_create(disk_s*);
+inode_s _inode_create(disk_s*,const uint8_t);
 bool    _inode_destroy(inode_s*);
 
 #endif

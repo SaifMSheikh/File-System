@@ -1,4 +1,5 @@
 #include "inode.h"
+#include "file.h"
 // Inode Types
 #define I_FREE 0
 #define I_FILE 1
@@ -12,7 +13,7 @@ dnode_s* _disk_inode(const disk_s* disk, const uint16_t inum) {
 	}
 	return (dnode_s*)&(disk->mem_start[IBLOCK(inum,disk->info)+(inum*sizeof(dnode_s))]); 
 }
-const uint16_t _disk_inode_alloc(disk_s* disk) {
+const uint16_t _disk_inode_alloc(const disk_s* disk) {
 	// Validate Inputs
 	char* err_str;
 	if (!is_valid(disk,err_str)) {
@@ -37,7 +38,7 @@ const uint16_t _disk_inode_alloc(disk_s* disk) {
 	printf("No Free Inodes\n");
 	return IMAX(disk->info);
 }
-bool _disk_inode_free(disk_s* disk,const uint16_t inum) {
+bool _disk_inode_free(const disk_s* disk,const uint16_t inum) {
 	// Validate Inputs
 	char* err_str;
 	if (!is_valid(disk,err_str)) {
@@ -81,7 +82,7 @@ inode_s _inode_get(disk_s* disk,const uint16_t inum) {
 	return node;
 }
 // Allocate New Inode
-inode_s _inode_create(disk_s* disk) {
+inode_s _inode_create(disk_s* disk,const uint8_t type) {
 	inode_s node;
 	node.valid=false;
 	// Validate Input
@@ -93,10 +94,19 @@ inode_s _inode_create(disk_s* disk) {
 	// Allocate Disk Space & Populate Inode Structure
 	node.dev=disk;
 	node.inum=_disk_inode_alloc(disk);
+	if (node.inum>=IMAX(disk->info))
+		return node;
 	node.info=_disk_inode(disk,node.inum);
+	if (node.info==NULL)
+		return node;
+	node.info->type=type;
+	if (node.info->type==I_DIRE) {
+		node.info->addr[0]=_disk_data_alloc(disk);
+		if (node.info->addr[0]>=disk->info.data_size)
+			return node;
+	}
 	// Validate Inode Struct
-	if (node.inum<IMAX(disk->info)&&node.info!=NULL)
-		node.valid=true;
+	node.valid=true;
 	return node;
 }
 // Release Inode
@@ -106,7 +116,31 @@ bool _inode_destroy(inode_s* inode) {
 		printf("Invalid Inode\n");
 		return false;
 	}
-	// Free Disk Space
 	inode->valid=false;
+	// Free Data
+	switch (inode->info->type) {
+		case I_FILE: {
+			// Direct Data
+			for (int i=0;(i<inode->info->size)&&(i<NDIRECT);++i)
+				_disk_data_free(inode->dev,i);
+			// Indirect Data
+			int size=(int)inode->info->size-NDIRECT;
+			uint16_t* entry=(uint16_t*)_disk_data_get(inode->dev,inode->info->addr[NDIRECT]);
+			for (int i=0;(i<size)&&(i<NINDIRECT);++i)	
+				_disk_data_free(inode->dev,i);
+			break;
+		}
+		case I_DIRE: {
+			// Indirect Data
+			dirent_s* entry=(dirent_s*)_disk_data_get(inode->dev,inode->info->addr[0]);
+			for (int i=0;(i<inode->info->size)&&(i<NDIRENT);++i) {
+				inode_s entry_node=_inode_get(inode->dev,entry[i].inum);
+				if (!_inode_destroy(&entry_node))
+					return false;
+			}
+			break;
+		}
+	};
+	// Free Disk Space
 	return _disk_inode_free(inode->dev,inode->inum);
 }

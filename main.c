@@ -8,6 +8,14 @@ void test_reset(disk_s* disk) {
 		printf("Freeing Inode %d...",i);
 		if (_disk_inode_free(disk,i))
 			printf("Success\n");
+		else printf("Failed\n");
+	}
+	printf("Freeing %d Data Blocks:\n",disk->info.data_size);
+	for (int i=0;i<disk->info.data_size;++i) {
+		printf("Freeing Data Block %d...",i);
+		if (_disk_data_free(disk,i))
+			printf("Success\n");
+		else printf("Failed\n");
 	}
 }
 
@@ -22,17 +30,8 @@ int main(const int argc, const char* argv[]) {
 	if (!disk_open(&disk,argv[1])) 
 		return 1;
 	// Testing
-//	test_reset(&disk);
-	printf("Creating Directory...");
-	inode_s root=_inode_create(&disk);
-	root.info->type=I_DIRE;
-	root.info->size=0;
-	uint16_t inum=dir_create(&root,"Saif");
-	if (inum>=IMAX(disk.info))
-		printf("Failed\n");
-	else printf("Allocated Inode %u\n",inum);
-//	inode_s dir=_inode_get(&disk,inum);
-//	dir_print(&dir,true);
+	inode_s root=_inode_get(&disk,0);
+	dir_print(&root,false);
 //	
 //	for (int i = 0; i < 10; ++i) {
 //		printf("Allocating Inode...");

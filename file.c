@@ -56,8 +56,10 @@ uint16_t dir_create(inode_s* dir,char* path) {
 		return IMAX(dir->dev->info);
 	}
 	// Check If Taken
-	if (dir_lookup(dir,path)!=IMAX(dir->dev->info))
+	if (dir_lookup(dir,path)!=IMAX(dir->dev->info)) {
+		printf("Filename Already Exists\n");
 		return IMAX(dir->dev->info);
+	}
 	// Get Parent Directory & Relative Path
 	char parent_path[255]="";
 	char target_name[DIRENT_NAME_LEN]="";
@@ -94,7 +96,6 @@ uint16_t dir_create(inode_s* dir,char* path) {
 	strcpy(entry[parent_dir->size++].name,target_name);
 	// Allocate Disk Space
 	entry->inum=_disk_inode_alloc(dir->dev);
-	printf("Allocated %s At Inode %u",entry[parent_dir->size-1].name,entry[parent_dir->size-1].inum);
 	return entry->inum;
 }
 void _dir_print(const inode_s* dir,const bool recursive,const uint8_t depth) {
