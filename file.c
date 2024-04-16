@@ -50,16 +50,18 @@ uint16_t dir_lookup(inode_s* dir,char* target_path) {
 	return IMAX(dir->dev->info);
 }
 // Create Directory At Relative Path From Parent
-uint16_t dir_create(inode_s* dir,char* path) {
+inode_s dir_create(inode_s* dir,char* path) {
+	inode_s node;
+	node.valid=false;
 	// Validate Input
 	if (!dir->valid) {
 		printf("Invalid Inode\n");
-		return IMAX(dir->dev->info);
+		return node;
 	}
 	// Check If Taken
 	if (dir_lookup(dir,path)!=IMAX(dir->dev->info)) {
 		printf("Filename Already Exists\n");
-		return IMAX(dir->dev->info);
+		return node;
 	}
 	// Get Parent Directory & Relative Path
 	char parent_path[255]="";
@@ -74,7 +76,7 @@ uint16_t dir_create(inode_s* dir,char* path) {
 	// Validate Target Name
 	if (strlen(target_name)>=DIRENT_NAME_LEN) {
 		printf("Name Too Long\n");
-		return IMAX(dir->dev->info);
+		return node;
 	}
 	// If Not Found, Use Current Directory As Parent
 	inode_s parent_dir;
@@ -84,28 +86,29 @@ uint16_t dir_create(inode_s* dir,char* path) {
 	}
 	// Otherwise, Fetch Parent Directory
 	else parent_dir=_inode_get(dir->dev,dir_lookup(dir,parent_path));
-	if (!parent_dir.valid)
-		return IMAX(dir->dev->info);
+	if (!parent_dir.valid) {
+		printf("Parent Directory Is Invalid");
+		return node;
+	}
 	// Update Parent Directory Data
 	if (parent_dir.info->size>=NDIRENT) {
 		printf("Parent Directory (%s) Full\n",parent_path);
-		return IMAX(dir->dev->info);
+		return node;
 	}
-	dirent_s* entry;
 	// Update Indirect Data
-	entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+parent_dir.info->addr[0])]);
+	dirent_s* entry=(dirent_s*)&(dir->dev->mem_start[BLOCK_SIZE*(dir->dev->info.data_start+parent_dir.info->addr[0])]);
 	strcpy(entry[parent_dir.info->size++].name,target_name);
 	// Allocate Disk Space
-	inode_s node=_inode_create(dir->dev,I_DIRE);
+	node=_inode_create(dir->dev,I_DIRE);
 	if (!node.valid)
-		return IMAX(dir->dev->info);
+		return node;
 	entry->inum=node.inum;
 	// Add Parent Directory Reference
 	entry=(dirent_s*)_disk_data_get(node.dev,node.info->addr[0]);
 	strcpy(entry[0].name,"..");
 	entry[0].inum=parent_dir.inum;
 	node.info->size++;
-	return entry->inum;
+	return node;
 }
 void dir_print(const inode_s* dir) {
 	// Validate Input

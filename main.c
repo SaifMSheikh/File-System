@@ -1,7 +1,7 @@
 #include "disk.h"
 #include "inode.h"
 #include "file.h"
-
+// Test Utility Functions
 bool test_reset(disk_s* disk) {
 	printf("Freeing %ld Inodes:\n",IMAX(disk->info));
 	for (int i=0;i<IMAX(disk->info);++i) {
@@ -23,7 +23,20 @@ bool test_reset(disk_s* disk) {
 		printf("Failed\n");
 		return false;
 	}
+	printf("Inode %u\n",root.inum);
 	return true;
+}
+
+void test_print_imap_index(const disk_s* disk,const uint16_t inum) {
+	// Validate Inputs
+	char* err_str;
+	if (!is_valid(disk,err_str)) {
+		printf("%s",err_str); 
+		return;
+	}
+	// Print Bitmap Index
+	uint8_t* imap=&disk->mem_start[BLOCK_SIZE];
+	printf("%d",(int)(imap[inum/8]&(1<<(inum%8))));
 }
 
 int main(const int argc, const char* argv[]) {
@@ -39,18 +52,22 @@ int main(const int argc, const char* argv[]) {
 	// Testing
 	if (!test_reset(&disk))
 		return 1;
+	printf("Bitmap Index 0: ");
+	test_print_imap_index(&disk,0);
+	printf("\n");
 	inode_s root=_inode_get(&disk,0);
-	dir_create(&root,"Saif");
+	printf("Creating Subdirectory \"%s\"...","Saif");
+	inode_s saif=dir_create(&root,"Saif");
+	if (!saif.valid) {
+		printf("Failed\n");
+		return 1;
+	}
+	else printf("Allocated Inode %u\n",saif.inum);
+	printf("ROOT DIRECTORY:");
 	dir_print(&root);
+	printf("SAIF:");
+	dir_print(&saif);
 	dir_destroy(&root,"Saif");
-	dir_print(&root);
-//	
-//	for (int i = 0; i < 10; ++i) {
-//		printf("Allocating Inode...");
-//		inode_s inode = _inode_create(&disk);
-//		if (!inode.valid) printf("%hu\n",inode.inum);
-//		else printf("Failed\n");
-//	}
 	// Cleanup
 	if (disk_close(&disk))
 		return 1;

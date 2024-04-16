@@ -21,8 +21,8 @@ const uint16_t _disk_inode_alloc(const disk_s* disk) {
 		return IMAX(disk->info);
 	}
 	// Query Inode Bitmap For Free Space
-	uint16_t inum = 0;
-	for (uint8_t* imap = &(disk->mem_start[BLOCK_SIZE]); inum < IMAX(disk->info);++inum) {
+	uint8_t* imap = &(disk->mem_start[BLOCK_SIZE]);
+	for (uint16_t inum = 0; inum < IMAX(disk->info);++inum) {
 		if (!(imap[inum/8]&(1<<(inum%8)))) {
 			// Found Free Inode
 			imap[inum/8]|=(1<<(inum%8));
@@ -142,5 +142,5 @@ bool _inode_destroy(inode_s* inode) {
 		}
 	};
 	// Free Disk Space
-//	return _disk_inode_free(inode->dev,inode->inum);
+	return _disk_inode_free(inode->dev,inode->inum);
 }
