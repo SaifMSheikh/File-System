@@ -4,6 +4,10 @@
 #include <errno.h>
 // Check Whether Disk Struct Is In A Valid State
 bool is_valid(const disk_s* disk, const char* err_str) {
+	if (disk==NULL) {
+		printf("Invalid Disk Pointer\n");
+		return false;
+	}
 	err_str = "";
 	if (disk->mem_start == NULL)
 		strcat("Invalid Memory Pointer\n",err_str);

@@ -133,7 +133,7 @@ bool _inode_destroy(inode_s* inode) {
 		case I_DIRE: {
 			// Indirect Data
 			dirent_s* entry=(dirent_s*)_disk_data_get(inode->dev,inode->info->addr[0]);
-			for (int i=0;(i<inode->info->size)&&(i<NDIRENT);++i) {
+			for (int i=2;(i<inode->info->size)&&(i<NDIRENT);++i) {
 				inode_s entry_node=_inode_get(inode->dev,entry[i].inum);
 				if (!_inode_destroy(&entry_node))
 					return false;
