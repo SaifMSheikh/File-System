@@ -13,13 +13,16 @@ public: // Disk RAII
 	FileSystem(const std::string& disk_file_name="disk.dat");
        ~FileSystem();
 public:	// Target Interface
-//	bool create_file(const std::string&);
-//	bool delete_file(const std::string&);
-//	bool move(const std::string&,const std::string&);
-//	bool mk_dir(const std::string&);
-//	bool ch_dir(const std::string&);
+// File Interface
 //	File open(const std::string&);
-//	bool close(const std::string&);
+//	void close(const std::string&);
+//	void create_file(const std::string&);
+	void delete_file(const std::string&);
+//	void move(const std::string&,const std::string&);
+// Directory Interface
+	void ls_dir();
+	void mk_dir(const std::string&);
+	void ch_dir(const std::string&);
 };
 
 //class File{

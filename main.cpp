@@ -9,6 +9,9 @@ int main(int argc,char* argv[]) {
 	}
 	// Testing
 	FileSystem fs(argv[1]);
+	fs.ls_dir();
+	fs.ch_dir("Thing");
+	fs.ls_dir();
 	// End
 	return 0;
 }

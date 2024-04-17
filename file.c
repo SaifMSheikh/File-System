@@ -29,7 +29,7 @@ uint16_t dir_lookup(const inode_s* dir,const char* target_path) {
 		next_dir.valid=false;
 		// Search Indirect Data
 		dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,dir->info->addr[0]);
-		for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i)
+		for (int i=0;i<dir->info->size;++i)
 			if (!strcmp(entry[i].name,next_name)) 
 				next_dir=_inode_get(dir->dev,entry[i].inum);
 		// Search Next Directory If Found
@@ -43,7 +43,7 @@ uint16_t dir_lookup(const inode_s* dir,const char* target_path) {
 	dirent_s* entry=(dirent_s*)dir->info->addr;
 	// Search Indirect Data
 	entry=(dirent_s*)_disk_data_get(dir->dev,dir->info->addr[0]);
-	for(int i=0;(i<dir->info->size)&&(i<NDIRENT);++i)
+	for(int i=0;i<dir->info->size;++i)
 		if (!strcmp(entry[i].name,target_path))
 			return entry[i].inum;
 	// Not Found
@@ -56,11 +56,12 @@ void dir_print(const inode_s* dir) {
 		printf("Invalid Root Node\n");
 		return;
 	}
+	printf("Directory (%u)",dir->inum);
 	// Print Entries
 	inode_s   node;
 	dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,dir->info->addr[0]);
-	for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i) 
-		printf("\n%s",entry[i].name);
+	for (int i=0;i<dir->info->size;++i) 
+		printf("\n\t%s (%u)",entry[i].name,entry[i].inum);
 	printf("\n");
 }
 // Create Directory At Relative Path From Parent
@@ -110,20 +111,19 @@ uint16_t file_create(const inode_s* dir,const char* path,const uint8_t type) {
 		return IMAX(dir->dev->info);
 	}
 	dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,parent_dir.info->addr[0]);
-	strcpy(entry[parent_dir.info->size++].name,target_name);
+	strcpy(entry[parent_dir.info->size].name,target_name);
 	// Allocate Disk Space
 	node=_inode_create(dir->dev,type);
 	if (!node.valid)
 		return IMAX(dir->dev->info);
-	entry->inum=node.inum;
+	entry[parent_dir.info->size].inum=node.inum;
+	parent_dir.info->size++;
 	if (node.info->type==I_DIRE) {
 		// Add Parent & Self Directory Entries
 		dirent_s* entry=(dirent_s*)_disk_data_get(node.dev,node.info->addr[0]);
 		strcpy(entry[0].name,"..");
 		entry[0].inum=parent_dir.inum;
-		strcpy(entry[1].name,".");
-		entry[1].inum=node.inum;
-		node.info->size+=2;
+		node.info->size++;
 	}
 	return node.inum;
 }
@@ -167,7 +167,7 @@ bool file_delete(const inode_s* dir,const char* path) {
 		if (entry[i].inum==target.inum) {
 			// Realign Array
 			for (int j=i+1;j<parent_dir.info->size;++j)
-				memmove(&entry[i],&entry[j],(parent_dir.info->size-j)*sizeof(dirent_s));
+				memmove(&entry[i],&entry[j],sizeof(dirent_s));
 			parent_dir.info->size--;
 			break;
 		}

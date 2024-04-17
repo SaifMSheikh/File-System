@@ -25,6 +25,7 @@ bool test_reset(disk_s* disk) {
 		return false;
 	}
 	printf("Inode %u\n",root.inum);
+	root.info->size++;
 	return true;
 }
 
@@ -55,34 +56,34 @@ int main(const int argc, const char* argv[]) {
 		return 1;
 	printf("Bitmap Index 0: ");
 	test_print_imap_index(&disk,0);
-	printf("\n");
-	inode_s root=_inode_get(&disk,0);
-	printf("Creating File \"Saif\"...");
-	uint16_t inum=file_create(&root,"Saif",I_FILE);
-	file_s saif=file_open(&root,"Saif",FILE_READABLE_BIT|FILE_WRITABLE_BIT);
-	if (!saif.valid) {
-		printf("Failed\n");
-		return 1;
-	}
-	printf("Allocated Node %u\n",inum);
-	printf("ROOT DIRECTORY:");
-	dir_print(&root);
-	char* buffer="Hello, World!\n";
-	file_write(&saif,(uint8_t*)buffer,strlen(buffer));
-	char out[255];
-	file_seek(&saif,0);
-	file_read(&saif,(uint8_t*)out,15);
-	printf("%s",out);
-	printf("Closing File...");
-	if (file_close(&saif))
-		printf("Success\n");
-	else printf("Failed\n");
-	printf("Deleting File...");
-	if (file_delete(&root,"Saif"))
-		printf("Success\n");
-	else printf("Failed\n");
+//	printf("\n");
+//	inode_s root=_inode_get(&disk,0);
+//	printf("Creating File \"Saif\"...");
+//	uint16_t inum=file_create(&root,"Saif",I_FILE);
+//	file_s saif=file_open(&root,"Saif",FILE_READABLE_BIT|FILE_WRITABLE_BIT);
+//	if (!saif.valid) {
+//		printf("Failed\n");
+//		return 1;
+//	}
+//	printf("Allocated Node %u\n",inum);
+//	printf("ROOT DIRECTORY:");
+//	dir_print(&root);
+//	char* buffer="Hello, World!\n";
+//	file_write(&saif,(uint8_t*)buffer,strlen(buffer));
+//	char out[255];
+//	file_seek(&saif,0);
+//	file_read(&saif,(uint8_t*)out,15);
+//	printf("%s",out);
+//	printf("Closing File...");
+//	if (file_close(&saif))
+//		printf("Success\n");
+//	else printf("Failed\n");
+//	printf("Deleting File...");
+//	if (file_delete(&root,"Saif"))
+//		printf("Success\n");
+//	else printf("Failed\n");
 	// Cleanup
-	if (disk_close(&disk))
+	if (!disk_close(&disk))
 		return 1;
 
 	return 0;

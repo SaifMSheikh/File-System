@@ -62,7 +62,7 @@ bool _disk_inode_free(const disk_s* disk,const uint16_t inum) {
 	if (node->size>NDIRECT) { 
 		int size=node->size-NDIRECT;
 		uint16_t* entry=(uint16_t*)_disk_data_get(disk,node->addr[NDIRECT]);
-		for (int i=0;(i<size)&&(i<NINDIRECT);++i)
+		for (int i=1;(i<size)&&(i<NINDIRECT);++i)
 			dmap[entry[i]/8]&=~(1<<(entry[i]%8));
 	}
 	return true;
@@ -133,7 +133,7 @@ bool _inode_destroy(inode_s* inode) {
 		case I_DIRE: {
 			// Indirect Data
 			dirent_s* entry=(dirent_s*)_disk_data_get(inode->dev,inode->info->addr[0]);
-			for (int i=2;(i<inode->info->size)&&(i<NDIRENT);++i) {
+			for (int i=1;i<inode->info->size;++i) {
 				inode_s entry_node=_inode_get(inode->dev,entry[i].inum);
 				if (!_inode_destroy(&entry_node))
 					return false;
