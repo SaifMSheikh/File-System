@@ -16,9 +16,9 @@ public:	// Target Interface
 // File Interface
 //	File open(const std::string&);
 //	void close(const std::string&);
-//	void create_file(const std::string&);
+	void create_file(const std::string&);
 	void delete_file(const std::string&);
-//	void move(const std::string&,const std::string&);
+	void move_file(const std::string&,const std::string&);
 // Directory Interface
 	void ls_dir();
 	void mk_dir(const std::string&);

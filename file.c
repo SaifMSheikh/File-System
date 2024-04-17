@@ -134,10 +134,6 @@ bool file_delete(const inode_s* dir,const char* path) {
 		printf("Failed To Fetch Target Directory\n");
 		return false;
 	}
-	if (target.info->ref_count) {
-		printf("File Cannot Be Deleted While Open\n");
-		return false;
-	}
 	// Update Parent Directory
 	inode_s parent_dir;
 	if (target.info->type==I_DIRE)
@@ -181,7 +177,7 @@ file_s file_open(const inode_s* dir,const char* path,const uint8_t mode) {
 	file.valid=false;
 	// Validate Inputs & Get Target Inode
 	file.node=_inode_get(dir->dev,dir_lookup(dir,path));
-	if (!file.node.valid||file.node.info->type==I_DIRE) {
+	if (!file.node.valid/*||file.node.info->type==I_DIRE*/) {
 		printf("Invalid Target\n");
 		return file;
 	} 
@@ -201,8 +197,6 @@ bool file_close(file_s* file) {
 		return false;
 	}
 	file->valid=false;
-	// Release Inode Reference
-	file->node.info->ref_count--;
 	return true;
 }
 // Write n Bytes To File

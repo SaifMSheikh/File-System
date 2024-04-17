@@ -107,6 +107,7 @@ inode_s _inode_create(disk_s* disk,const uint8_t type) {
 	}
 	// Validate Inode Struct
 	node.valid=true;
+	node.info->ref_count++;
 	return node;
 }
 // Release Inode
@@ -117,6 +118,8 @@ bool _inode_destroy(inode_s* inode) {
 		return false;
 	}
 	inode->valid=false;
+	if (--inode->info->ref_count)
+		return true;
 	// Free Data
 	switch (inode->info->type) {
 		case I_FILE: {

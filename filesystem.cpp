@@ -1,4 +1,5 @@
 #include "filesystem.hpp"
+#include <cstring>
 // disk_s RAII
 FileSystem::FileSystem(const std::string& disk_file_name) {
 	// Setup disk_s struct
@@ -31,5 +32,78 @@ void FileSystem::ch_dir(const std::string& path) {
 		m_dir=dir;
 }
 // File Operations
+void FileSystem::create_file(const std::string& path) 
+{ file_create(&m_dir,path.c_str(),I_FILE); }
 void FileSystem::delete_file(const std::string& path) 
 { file_delete(&m_dir,path.c_str()); }
+void FileSystem::move_file(const std::string& src_path,const std::string& dst_path) { 
+	// Get Source File Handle
+	if (dir_lookup(&m_dir,src_path.c_str())>=IMAX(m_disk.info)) {
+		printf("Cannot Find Source File\n");
+		return;
+	}
+	file_s src=file_open(&m_dir,src_path.c_str(),FILE_READABLE_BIT|FILE_WRITABLE_BIT);
+	// Update Destination Parent Directory
+	{	// Destination
+		char parent_path[255]="";
+		char target_name[255]="";
+		for (int i=dst_path.length();i>=0;--i) {
+			if (dst_path[i]=='/') {
+				strncpy(parent_path,dst_path.c_str(),i);
+				strncpy(target_name,dst_path.c_str()+i+1,dst_path.length()-i+1);
+				break;
+			}
+		}
+		printf("Destination : %s | %s\n",parent_path,target_name);
+		inode_s parent_dir;
+		inode_s old_entry;
+		if (!strcmp(parent_path,"")) {
+			parent_dir=m_dir;
+			strncpy(target_name,dst_path.c_str(),dst_path.length());;
+		}
+		else parent_dir=_inode_get(&m_disk,dir_lookup(&m_dir,parent_path));
+		dirent_s* entry=(dirent_s*)_disk_data_get(&m_disk,parent_dir.info->addr[0]);
+		for (int i=0;i<parent_dir.info->size;++i) {
+			if (!strcmp(entry[i].name,target_name)) {
+				inode_s old_node=_inode_get(&m_disk,entry[i].inum);
+				_inode_destroy(&old_node);
+				entry[i].inum=src.node.inum;
+				strncpy(entry[i].name,target_name,DIRENT_NAME_LEN);
+				goto source_delete;
+			}
+		}
+		// If Not Found, Add New Entry
+		entry[parent_dir.info->size].inum=src.node.inum;
+		strncpy(entry[parent_dir.info->size].name,target_name,DIRENT_NAME_LEN);
+		parent_dir.info->size++;
+	}
+	{	// Source
+		source_delete:
+		char parent_path[255]="";
+		char target_name[255]="";
+		for (int i=src_path.length();i>=0;--i) {
+			if (src_path[i]=='/') {
+				strncpy(parent_path,src_path.c_str(),i);
+				strncpy(target_name,src_path.c_str()+i+1,src_path.length()-i+1);
+				break;
+			}
+		}
+		printf("Source : %s | %s\n",parent_path,target_name);
+		inode_s parent_dir;
+		if (!strcmp(parent_path,"")) {
+			parent_dir=m_dir;
+			strncpy(target_name,src_path.c_str(),src_path.length());
+		}
+		else parent_dir=_inode_get(&m_disk,dir_lookup(&m_dir,parent_path));
+		dirent_s* entry=(dirent_s*)_disk_data_get(&m_disk,parent_dir.info->addr[0]);
+		for (int i=0;i<parent_dir.info->size;++i) {
+			if (entry[i].inum==src.node.inum) {
+				for (int j=i+1;j<parent_dir.info->size;++j)
+					memmove(&entry[i],&entry[j],sizeof(dirent_s));
+				parent_dir.info->size--;
+				break;
+			}
+		}
+	}
+	file_close(&src);
+}
