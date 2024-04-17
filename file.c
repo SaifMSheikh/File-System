@@ -49,34 +49,19 @@ uint16_t dir_lookup(const inode_s* dir,const char* target_path) {
 	// Not Found
 	return IMAX(dir->dev->info);
 }
-// Get File Handle, Given Directory & Relative Path
-file_s file_open(const inode_s* dir,const char* path,const uint8_t mode) {
-	file_s file;
-	file.valid=false;
-	// Validate Inputs & Get Target Inode
-	file.node=_inode_get(dir->dev,dir_lookup(dir,path));
-	if (!file.node.valid||file.node.info->type==I_DIRE) {
-		printf("Invalid Target\n");
-		return file;
-	} 
-	// Populate File Handle
-	file.iter=0;
-	file.mode=mode;
-	// Increment File Reference Count
-	file.node.info->ref_count++;
-	file.valid=true;
-	return file;
-}
-// Release File Handle
-bool file_close(file_s* file) {
+// Print Directory Entries (Non-Recursive)
+void dir_print(const inode_s* dir) {
 	// Validate Input
-	if (!file->valid) {
-		printf("Invalid File Handle\n");
-		return false;
+	if (!dir->valid||dir->info->type!=I_DIRE) {
+		printf("Invalid Root Node\n");
+		return;
 	}
-	file->valid=false;
-	// Release Inode Reference
-	file->node.info->ref_count--;
+	// Print Entries
+	inode_s   node;
+	dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,dir->info->addr[0]);
+	for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i) 
+		printf("\n%s",entry[i].name);
+	printf("\n");
 }
 // Create Directory At Relative Path From Parent
 uint16_t file_create(const inode_s* dir,const char* path,const uint8_t type) {
@@ -142,19 +127,6 @@ uint16_t file_create(const inode_s* dir,const char* path,const uint8_t type) {
 	}
 	return node.inum;
 }
-void dir_print(const inode_s* dir) {
-	// Validate Input
-	if (!dir->valid||dir->info->type!=I_DIRE) {
-		printf("Invalid Root Node\n");
-		return;
-	}
-	// Print Entries
-	inode_s   node;
-	dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,dir->info->addr[0]);
-	for (int i=0;(i<dir->info->size)&&(i<NDIRENT);++i) 
-		printf("\n%s",entry[i].name);
-	printf("\n");
-}
 bool file_delete(const inode_s* dir,const char* path) {
 	// Get Target
 	inode_s target=_inode_get(dir->dev,dir_lookup(dir,path));
@@ -202,4 +174,112 @@ bool file_delete(const inode_s* dir,const char* path) {
 	}
 	// Free Resources
 	return _inode_destroy(&target);
+}
+// Get File Handle, Given Directory & Relative Path
+file_s file_open(const inode_s* dir,const char* path,const uint8_t mode) {
+	file_s file;
+	file.valid=false;
+	// Validate Inputs & Get Target Inode
+	file.node=_inode_get(dir->dev,dir_lookup(dir,path));
+	if (!file.node.valid||file.node.info->type==I_DIRE) {
+		printf("Invalid Target\n");
+		return file;
+	} 
+	// Populate File Handle
+	file.iter=0;
+	file.mode=mode;
+	// Increment File Reference Count
+	file.node.info->ref_count++;
+	file.valid=true;
+	return file;
+}
+// Release File Handle
+bool file_close(file_s* file) {
+	// Validate Input
+	if (!file->valid) {
+		printf("Invalid File Handle\n");
+		return false;
+	}
+	file->valid=false;
+	// Release Inode Reference
+	file->node.info->ref_count--;
+}
+// Write n Bytes To File
+uint32_t file_write(file_s* file,uint8_t* buffer,const size_t n_bytes) {
+	// Validate Inputs
+	if (!file->valid||!(file->mode&FILE_WRITABLE_BIT)) {
+		printf("Invalid File Handle\n");
+		return file->iter;
+	}
+	if (file->iter+n_bytes>=BLOCK_SIZE*(NDIRECT+NINDIRECT)) {
+		printf("Cannot Exceed File Size %ld",BLOCK_SIZE*(NDIRECT+NINDIRECT));
+		return file->iter;
+	}
+	// Get Data At Iterator
+	uint8_t* data;
+	// 1 - Check Direct Data Section
+	if (file->iter<BLOCK_SIZE*NDIRECT) 
+		data=_disk_data_get(file->node.dev,file->node.info->addr[file->iter/BLOCK_SIZE]);
+	// 2 - Check Indirect Data Section
+	else {
+		uint16_t* entry=(uint16_t*)_disk_data_get(file->node.dev,file->node.info->addr[NDIRECT]);
+		int block_no=(file->iter/BLOCK_SIZE)-NDIRECT;
+		data=_disk_data_get(file->node.dev,file->node.info->addr[block_no]);
+	}
+	// 3 - Get Offset Into Block
+	data+=(file->iter%BLOCK_SIZE);
+	// Write Data From Buffer & Increment Iterator
+	memcpy(data,buffer,n_bytes);
+	file->iter+=n_bytes;
+	return file->iter;
+}
+// Read n Bytes From File
+uint32_t file_read(file_s* file,uint8_t* buffer,size_t n_bytes) {
+	// Validate Inputs
+	if (!file->valid||!(file->mode&FILE_READABLE_BIT)) {
+		printf("Invalid File Handle\n");
+		return 0;
+	}
+	// Get Data At Iterator
+	uint8_t* data;
+	// 1 - Check Direct Data Section
+	if (file->iter<BLOCK_SIZE*NDIRECT) 
+		data=_disk_data_get(file->node.dev,file->node.info->addr[file->iter/BLOCK_SIZE]);
+	// 2 - Check Indirect Data Section
+	else {
+		uint16_t* entry=(uint16_t*)_disk_data_get(file->node.dev,file->node.info->addr[NDIRECT]);
+		int block_no=(file->iter/BLOCK_SIZE)-NDIRECT;
+		data=_disk_data_get(file->node.dev,file->node.info->addr[block_no]);
+	}
+	// 3 - Get Offset Into Block
+	data+=(file->iter%BLOCK_SIZE);
+	// Write Data Into Buffer & Increment Iterator
+	memcpy(buffer,data,n_bytes);
+	file->iter+=n_bytes;
+	return file->iter;
+}
+// Set File Iterator Position
+bool file_seek(file_s* file,const uint32_t position) {
+	// Validate Inputs
+	if (!file->valid) {
+		printf("Invalid File Handle\n");
+		return false;
+	}
+	if (position<0||position>=BLOCK_SIZE*(NDIRECT+NINDIRECT)) {
+		printf("Invalidd Iterator Position\n");
+		return false;
+	}
+	// Set Iterator Position
+	file->iter=position;
+	return true;
+}
+// Get File Iterator Position
+uint32_t file_tell(const file_s* file) {
+	// Validate Input
+	if (!file->valid) {
+		printf("Invalid File Handle\n");
+		return false;
+	}
+	// Get Iterator Position
+	return file->iter;
 }
