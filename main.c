@@ -57,7 +57,7 @@ int main(const int argc, const char* argv[]) {
 	printf("\n");
 	inode_s root=_inode_get(&disk,0);
 	printf("Creating Subdirectory \"%s\"...","Saif");
-	inode_s saif=dir_create(&root,"Saif");
+	inode_s saif=file_create(&root,"Saif",I_DIRE);
 	if (!saif.valid) {
 		printf("Failed\n");
 		return 1;
@@ -67,7 +67,7 @@ int main(const int argc, const char* argv[]) {
 	dir_print(&root);
 	printf("SAIF:");
 	dir_print(&saif);
-	dir_destroy(&root,"Saif");
+	file_delete(&root,"Saif");
 	// Cleanup
 	if (disk_close(&disk))
 		return 1;

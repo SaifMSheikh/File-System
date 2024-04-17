@@ -50,7 +50,7 @@ uint16_t dir_lookup(const inode_s* dir,const char* target_path) {
 	return IMAX(dir->dev->info);
 }
 // Create Directory At Relative Path From Parent
-inode_s dir_create(const inode_s* dir,const char* path) {
+inode_s file_create(const inode_s* dir,const char* path,const uint8_t type) {
 	inode_s node;
 	node.valid=false;
 	// Validate Input
@@ -95,21 +95,22 @@ inode_s dir_create(const inode_s* dir,const char* path) {
 		printf("Parent Directory (%s) Full\n",parent_path);
 		return node;
 	}
-	// Update Indirect Data
 	dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,parent_dir.info->addr[0]);
 	strcpy(entry[parent_dir.info->size++].name,target_name);
 	// Allocate Disk Space
-	node=_inode_create(dir->dev,I_DIRE);
+	node=_inode_create(dir->dev,type);
 	if (!node.valid)
 		return node;
 	entry->inum=node.inum;
-	// Add Parent Directory Reference
-	entry=(dirent_s*)_disk_data_get(node.dev,node.info->addr[0]);
-	strcpy(entry[0].name,"..");
-	entry[0].inum=parent_dir.inum;
-	strcpy(entry[1].name,".");
-	entry[1].inum=node.inum;
-	node.info->size+=2;
+	if (node.info->type==I_DIRE) {
+		// Add Parent & Self Directory Entries
+		dirent_s* entry=(dirent_s*)_disk_data_get(node.dev,node.info->addr[0]);
+		strcpy(entry[0].name,"..");
+		entry[0].inum=parent_dir.inum;
+		strcpy(entry[1].name,".");
+		entry[1].inum=node.inum;
+		node.info->size+=2;
+	}
 	return node;
 }
 void dir_print(const inode_s* dir) {
@@ -125,8 +126,8 @@ void dir_print(const inode_s* dir) {
 		printf("\n%s",entry[i].name);
 	printf("\n");
 }
-bool dir_destroy(const inode_s* dir,const char* path) {
-	// Get Target Directory
+bool file_delete(const inode_s* dir,const char* path) {
+	// Get Target
 	inode_s target_dir=_inode_get(dir->dev,dir_lookup(dir,path));
 	if (!target_dir.valid) { 
 		printf("Failed To Fetch Target Directory\n");
