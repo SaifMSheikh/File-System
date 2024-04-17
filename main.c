@@ -57,17 +57,28 @@ int main(const int argc, const char* argv[]) {
 	printf("\n");
 	inode_s root=_inode_get(&disk,0);
 	printf("Creating Subdirectory \"%s\"...","Saif");
-	inode_s saif=file_create(&root,"Saif",I_DIRE);
-	if (!saif.valid) {
+	uint16_t inum=file_create(&root,"Saif",I_DIRE);
+//	file_s saif=file_open(&root,"Saif",FILE_READABLE_BIT|FILE_WRITABLE_BIT);
+//	if (!saif.valid) {
+//		printf("Failed\n");
+//		return 1;
+//	}
+	if (inum>=IMAX(root.dev->info))
 		printf("Failed\n");
-		return 1;
-	}
-	else printf("Allocated Inode %u\n",saif.inum);
+	else printf("Allocated Inode %u\n",inum);
 	printf("ROOT DIRECTORY:");
 	dir_print(&root);
 	printf("SAIF:");
+	inode_s saif=_inode_get(root.dev,inum);
 	dir_print(&saif);
-	file_delete(&root,"Saif");
+//	printf("Closing File...");
+//	if (file_close(&saif))
+//		printf("Success\n");
+//	else printf("Failed\n");
+	printf("Deleting File...");
+	if (file_delete(&root,"Saif"))
+		printf("Success\n");
+	else printf("Failed\n");
 	// Cleanup
 	if (disk_close(&disk))
 		return 1;

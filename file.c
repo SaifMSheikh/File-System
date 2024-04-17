@@ -7,7 +7,7 @@
 uint16_t dir_lookup(const inode_s* dir,const char* target_path) {
 	// Validate Inputs
 	if (!dir->valid||dir->info->type!=I_DIRE) {
-		printf("Invalid Root Inode");
+		printf("Invalid Root Inode\n");
 		return IMAX(dir->dev->info);
 	}
 	// Parse Target Path For Subdirectory
@@ -49,19 +49,48 @@ uint16_t dir_lookup(const inode_s* dir,const char* target_path) {
 	// Not Found
 	return IMAX(dir->dev->info);
 }
+// Get File Handle, Given Directory & Relative Path
+file_s file_open(const inode_s* dir,const char* path,const uint8_t mode) {
+	file_s file;
+	file.valid=false;
+	// Validate Inputs & Get Target Inode
+	file.node=_inode_get(dir->dev,dir_lookup(dir,path));
+	if (!file.node.valid||file.node.info->type==I_DIRE) {
+		printf("Invalid Target\n");
+		return file;
+	} 
+	// Populate File Handle
+	file.iter=0;
+	file.mode=mode;
+	// Increment File Reference Count
+	file.node.info->ref_count++;
+	file.valid=true;
+	return file;
+}
+// Release File Handle
+bool file_close(file_s* file) {
+	// Validate Input
+	if (!file->valid) {
+		printf("Invalid File Handle\n");
+		return false;
+	}
+	file->valid=false;
+	// Release Inode Reference
+	file->node.info->ref_count--;
+}
 // Create Directory At Relative Path From Parent
-inode_s file_create(const inode_s* dir,const char* path,const uint8_t type) {
+uint16_t file_create(const inode_s* dir,const char* path,const uint8_t type) {
 	inode_s node;
 	node.valid=false;
 	// Validate Input
 	if (!dir->valid) {
 		printf("Invalid Inode\n");
-		return node;
+		return IMAX(dir->dev->info);
 	}
 	// Check If Taken
 	if (dir_lookup(dir,path)!=IMAX(dir->dev->info)) {
 		printf("Filename Already Exists\n");
-		return node;
+		return IMAX(dir->dev->info);
 	}
 	// Get Parent Directory & Relative Path
 	char parent_path[255]="";
@@ -76,7 +105,7 @@ inode_s file_create(const inode_s* dir,const char* path,const uint8_t type) {
 	// Validate Target Name
 	if (strlen(target_name)>=DIRENT_NAME_LEN) {
 		printf("Name Too Long\n");
-		return node;
+		return IMAX(dir->dev->info);
 	}
 	// If Not Found, Use Current Directory As Parent
 	inode_s parent_dir;
@@ -88,19 +117,19 @@ inode_s file_create(const inode_s* dir,const char* path,const uint8_t type) {
 	else parent_dir=_inode_get(dir->dev,dir_lookup(dir,parent_path));
 	if (!parent_dir.valid) {
 		printf("Parent Directory Is Invalid");
-		return node;
+		return IMAX(dir->dev->info);
 	}
 	// Update Parent Directory Data
 	if (parent_dir.info->size>=NDIRENT) {
 		printf("Parent Directory (%s) Full\n",parent_path);
-		return node;
+		return IMAX(dir->dev->info);
 	}
 	dirent_s* entry=(dirent_s*)_disk_data_get(dir->dev,parent_dir.info->addr[0]);
 	strcpy(entry[parent_dir.info->size++].name,target_name);
 	// Allocate Disk Space
 	node=_inode_create(dir->dev,type);
 	if (!node.valid)
-		return node;
+		return IMAX(dir->dev->info);
 	entry->inum=node.inum;
 	if (node.info->type==I_DIRE) {
 		// Add Parent & Self Directory Entries
@@ -111,7 +140,7 @@ inode_s file_create(const inode_s* dir,const char* path,const uint8_t type) {
 		entry[1].inum=node.inum;
 		node.info->size+=2;
 	}
-	return node;
+	return node.inum;
 }
 void dir_print(const inode_s* dir) {
 	// Validate Input
@@ -128,13 +157,34 @@ void dir_print(const inode_s* dir) {
 }
 bool file_delete(const inode_s* dir,const char* path) {
 	// Get Target
-	inode_s target_dir=_inode_get(dir->dev,dir_lookup(dir,path));
-	if (!target_dir.valid) { 
+	inode_s target=_inode_get(dir->dev,dir_lookup(dir,path));
+	if (!target.valid) { 
 		printf("Failed To Fetch Target Directory\n");
 		return false;
 	}
+	if (target.info->ref_count) {
+		printf("File Cannot Be Deleted While Open\n");
+		return false;
+	}
 	// Update Parent Directory
-	inode_s parent_dir=_inode_get(dir->dev,dir_lookup(&target_dir,".."));
+	inode_s parent_dir;
+	if (target.info->type==I_DIRE)
+		{ parent_dir=_inode_get(dir->dev,dir_lookup(&target,"..")); }
+	else {
+		// Get Parent Directory Path
+		char parent_path[255]="";
+		for(int i=strlen(path)-1;i>=0;--i) {
+			if (path[i]=='/') {
+				strncpy(parent_path,path,i);
+				break;
+			}
+		}
+		// If Not Found, Use Current Directory As Parent
+		if (!strcmp(parent_path,""))
+			parent_dir=*dir;
+		// Otherwise, Fetch Parent Directory
+		else parent_dir=_inode_get(dir->dev,dir_lookup(dir,parent_path));
+	}
 	if (!parent_dir.valid) {
 		printf("Failed To Fetch Parent Directory\n");
 		return false;
@@ -142,7 +192,7 @@ bool file_delete(const inode_s* dir,const char* path) {
 	int i;
 	dirent_s* entry=(dirent_s*)_disk_data_get(parent_dir.dev,parent_dir.info->addr[0]);
 	for (i=0;i<parent_dir.info->size;++i) {
-		if (entry[i].inum==target_dir.inum) {
+		if (entry[i].inum==target.inum) {
 			// Realign Array
 			for (int j=i+1;j<parent_dir.info->size;++j)
 				memmove(&entry[i],&entry[j],(parent_dir.info->size-j)*sizeof(dirent_s));
@@ -151,5 +201,5 @@ bool file_delete(const inode_s* dir,const char* path) {
 		}
 	}
 	// Free Resources
-	return _inode_destroy(&target_dir);
+	return _inode_destroy(&target);
 }
