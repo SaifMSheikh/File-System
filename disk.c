@@ -109,6 +109,7 @@ bool disk_close(disk_s* disk) {
 	// Cleanup
 	free(disk->mem_start);
 	fclose(disk->file);
+	return true;
 }
 // Get Data Block From Memory
 uint8_t* _disk_data_get(const disk_s* disk,const uint16_t bnum) {
@@ -141,6 +142,8 @@ uint16_t _disk_data_alloc(const disk_s* disk) {
 			return bnum;
 		}
 	}
+	// No Availabl Data Blocks
+	return disk->info.data_size;
 }
 // Free Allocated Data Block
 bool _disk_data_free(const disk_s* disk,const uint16_t bnum) {

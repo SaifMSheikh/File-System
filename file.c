@@ -203,6 +203,7 @@ bool file_close(file_s* file) {
 	file->valid=false;
 	// Release Inode Reference
 	file->node.info->ref_count--;
+	return true;
 }
 // Write n Bytes To File
 uint32_t file_write(file_s* file,uint8_t* buffer,const size_t n_bytes) {
