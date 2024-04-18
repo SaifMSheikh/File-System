@@ -15,7 +15,6 @@ public: // Disk RAII
 public:	// Target Interface
 // File Interface
 	File open(const std::string&,const uint8_t&);
-	void close(const std::string&);
 	void create_file(const std::string&);
 	void delete_file(const std::string&);
 	void move_file(const std::string&,const std::string&);
@@ -33,7 +32,7 @@ public: // File RAII
        ~File();
 public: // Read / Write Interface
 	void write(const std::string&);
-	void write(const std::string&,const uint32_t&);
-	std::string read(const uint32_t&,const uint32_t&);
+	void write(const std::string&,const uint8_t&);
+	std::string read(const uint8_t&,const uint8_t&);
 	std::string read();
 };

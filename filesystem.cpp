@@ -119,7 +119,7 @@ void File::write(const std::string& buffer) {
 	end=file_write(&m_file,(uint8_t*)buffer.c_str(),buffer.length()); 
 	file_seek(&m_file,temp_iter);
 }
-void File::write(const std::string& buffer,const uint32_t& position) {
+void File::write(const std::string& buffer,const uint8_t& position) {
 	// Write To Specific Position
 	file_seek(&m_file,position);
 	file_write(&m_file,(uint8_t*)buffer.c_str(),buffer.length());
@@ -136,7 +136,7 @@ std::string File::read() {
 	file_seek(&m_file,temp_iter);
 	return buffer;
 }
-std::string File::read(const uint32_t& start,const uint32_t& size) {
+std::string File::read(const uint8_t& start,const uint8_t& size) {
 	// Read From Offset
 	file_seek(&m_file,start);
 	uint8_t buffer[size];
