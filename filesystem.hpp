@@ -14,8 +14,8 @@ public: // Disk RAII
        ~FileSystem();
 public:	// Target Interface
 // File Interface
-//	File open(const std::string&);
-//	void close(const std::string&);
+	File open(const std::string&,const uint8_t&);
+	void close(const std::string&);
 	void create_file(const std::string&);
 	void delete_file(const std::string&);
 	void move_file(const std::string&,const std::string&);
@@ -25,13 +25,15 @@ public:	// Target Interface
 	void ch_dir(const std::string&);
 };
 
-//class File{
-//	file_s m_file;
-//public: // File RAII
-//	File(file_s);
-//       ~File();
-//public: // Read / Write Interface
-//	void write(const std::string&);
-//	void write(const std::string&,const size_t&);
-//	std::string read(const size_t&,const size_t&);
-//};
+class File{
+	file_s m_file;
+	uint32_t end;
+public: // File RAII
+	File(file_s);
+       ~File();
+public: // Read / Write Interface
+	void write(const std::string&);
+	void write(const std::string&,const uint32_t&);
+	std::string read(const uint32_t&,const uint32_t&);
+	std::string read();
+};

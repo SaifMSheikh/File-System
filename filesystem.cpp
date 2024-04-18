@@ -107,3 +107,39 @@ void FileSystem::move_file(const std::string& src_path,const std::string& dst_pa
 	}
 	file_close(&src);
 }
+// File Handle Interface
+File FileSystem::open(const std::string& path,const uint8_t& mode) 
+{ return File(file_open(&m_dir,path.c_str(),mode)); }
+File::File(file_s file) : m_file(file) { end=0; }
+File::~File() { file_close(&m_file); }
+void File::write(const std::string& buffer) { 
+	// Write To End
+	uint32_t temp_iter=file_tell(&m_file);
+	file_seek(&m_file,end);
+	end=file_write(&m_file,(uint8_t*)buffer.c_str(),buffer.length()); 
+	file_seek(&m_file,temp_iter);
+}
+void File::write(const std::string& buffer,const uint32_t& position) {
+	// Write To Specific Position
+	file_seek(&m_file,position);
+	file_write(&m_file,(uint8_t*)buffer.c_str(),buffer.length());
+	if (m_file.iter>end)
+		end=file_tell(&m_file);
+}
+std::string File::read() {
+	// Read All Contents
+	uint32_t temp_iter=file_tell(&m_file);
+	int size=0;
+	while (read(size,1)!="\0") { size++; }
+	file_seek(&m_file,0);
+	std::string buffer=read(0,size);
+	file_seek(&m_file,temp_iter);
+	return buffer;
+}
+std::string File::read(const uint32_t& start,const uint32_t& size) {
+	// Read From Offset
+	file_seek(&m_file,start);
+	uint8_t buffer[size];
+	file_read(&m_file,buffer,size);
+	return std::string((char*)buffer);
+}

@@ -213,7 +213,7 @@ uint32_t file_write(file_s* file,uint8_t* buffer,const size_t n_bytes) {
 	// Get Data At Iterator
 	uint8_t* data;
 	// 1 - Check Direct Data Section
-	if (file->iter<BLOCK_SIZE*NDIRECT) 
+	if (file->iter<(BLOCK_SIZE*NDIRECT)) 
 		data=_disk_data_get(file->node.dev,file->node.info->addr[file->iter/BLOCK_SIZE]);
 	// 2 - Check Indirect Data Section
 	else {
