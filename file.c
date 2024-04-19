@@ -118,13 +118,21 @@ uint16_t file_create(const inode_s* dir,const char* path,const uint8_t type) {
 		return IMAX(dir->dev->info);
 	entry[parent_dir.info->size].inum=node.inum;
 	parent_dir.info->size++;
-	if (node.info->type==I_DIRE) {
+	switch (node.info->type) {
+	case I_DIRE: {
 		// Add Parent & Self Directory Entries
 		dirent_s* entry=(dirent_s*)_disk_data_get(node.dev,node.info->addr[0]);
 		strcpy(entry[0].name,"..");
 		entry[0].inum=parent_dir.inum;
 		node.info->size++;
+		break;
+	} 
+	case I_FILE: {
+		// Null Terminate
+		*_disk_data_get(node.dev,node.info->addr[0]);
+		break;
 	}
+	};
 	return node.inum;
 }
 bool file_delete(const inode_s* dir,const char* path) {

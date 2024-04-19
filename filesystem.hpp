@@ -1,3 +1,5 @@
+#ifndef FILESYSTEM_H
+#define FILESYSTEM_H
 #include "disk.h"
 #include "inode.h"
 #include "file.h"
@@ -32,7 +34,9 @@ public: // File RAII
        ~File();
 public: // Read / Write Interface
 	void write(const std::string&);
-	void write(const std::string&,const uint8_t&);
-	std::string read(const uint8_t&,const uint8_t&);
+	void write(const std::string&,const uint32_t&);
+	bool is_valid();
+	std::string read(const uint32_t&,const uint32_t&);
 	std::string read();
 };
+#endif
