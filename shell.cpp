@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 
-Shell::Shell(char* disk_file_name) : fs(disk_file_name) {}
+Shell::Shell(char *disk_file_name) : fs(disk_file_name) {}
 
 void Shell::Run()
 {
@@ -23,8 +23,6 @@ void Shell::Run()
                          "  ls \t\t\tList contents of current directory\n"
                          "  create <file_name>\t\tCreate a new file\n"
                          "  rm <file_or_directory_name>\t\tDelete a file or directory\n"
-                         "  open <file_name>\t\tOpen a file\n"
-                         "  close <file_name>\t\tClose a file\n"
                          "  write <flag> [optional position] <file_name> <text to write>\tWrite text to a file\n"
                          "  read <file_name> [start] [size]\tRead text from a file\n"
                          "  mv <source> <destination>\tMove a file or directory\n"
@@ -47,7 +45,8 @@ void Shell::Run()
                 iss >> dirName;
                 fs.mk_dir(dirName);
             }
-            if(cmd == "command"){
+            if (cmd == "command")
+            {
                 std::string cmd;
                 std::getline(iss, cmd);
                 system(cmd.c_str());
@@ -100,9 +99,18 @@ void Shell::Run()
                 }
 
                 File file = fs.open(fileName, FILE_WRITABLE_BIT | FILE_READABLE_BIT);
-                std::cout<<"DEBUG: File name \""<<fileName<<"\""<<std::endl;
+                std::cout << "DEBUG: File name \"" << fileName << "\"" << std::endl;
                 if (flag == "-t")
-                    file.write(text);
+                {
+                    if (file.is_valid())
+                    {
+                        auto text = file.read();
+                        fs.delete_file(fileName);
+                        fs.create_file(fileName);
+                        std::cout << text << std::endl;
+                        file.write(text);
+                    }
+                }
                 else if (flag == "-p")
                     file.write(text, pos);
                 else // append
@@ -118,10 +126,14 @@ void Shell::Run()
                 int start = 0, size = -1;
                 iss >> fileName >> start >> size;
                 File file = fs.open(fileName, FILE_READABLE_BIT);
-                if (size == -1){
+                if (!file.is_valid())
+                    continue;
+                if (size == -1)
+                {
                     std::cout << file.read();
                 }
-                else{
+                else
+                {
                     std::cout << file.read(start, size);
                 }
             }

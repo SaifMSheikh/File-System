@@ -143,3 +143,7 @@ std::string File::read(const uint32_t& start,const uint32_t& size) {
 	file_read(&m_file,buffer,size);
 	return std::string((char*)buffer);
 }
+
+bool File::is_valid(){
+	return m_file.valid;
+}

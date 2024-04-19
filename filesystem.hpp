@@ -35,6 +35,7 @@ public: // File RAII
 public: // Read / Write Interface
 	void write(const std::string&);
 	void write(const std::string&,const uint32_t&);
+	bool is_valid();
 	std::string read(const uint32_t&,const uint32_t&);
 	std::string read();
 };
