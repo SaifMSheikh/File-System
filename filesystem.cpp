@@ -139,7 +139,7 @@ std::string File::read() {
 std::string File::read(const uint8_t& start,const uint8_t& size) {
 	// Read From Offset
 	file_seek(&m_file,start);
-	uint8_t buffer[size];
+	uint8_t *buffer = new uint8_t[size];
 	file_read(&m_file,buffer,size);
 	return std::string((char*)buffer);
 }
