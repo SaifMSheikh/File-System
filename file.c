@@ -119,19 +119,14 @@ uint16_t file_create(const inode_s* dir,const char* path,const uint8_t type) {
 	entry[parent_dir.info->size].inum=node.inum;
 	parent_dir.info->size++;
 	switch (node.info->type) {
-	case I_DIRE: {
-		// Add Parent & Self Directory Entries
-		dirent_s* entry=(dirent_s*)_disk_data_get(node.dev,node.info->addr[0]);
-		strcpy(entry[0].name,"..");
-		entry[0].inum=parent_dir.inum;
-		node.info->size++;
-		break;
-	} 
-	case I_FILE: {
-		// Null Terminate
-		*_disk_data_get(node.dev,node.info->addr[0]);
-		break;
-	}
+		case I_DIRE: {
+			// Add Parent & Self Directory Entries
+			dirent_s* entry=(dirent_s*)_disk_data_get(node.dev,node.info->addr[0]);
+			strcpy(entry[0].name,"..");
+			entry[0].inum=parent_dir.inum;
+			node.info->size++;
+			break;
+		}
 	};
 	return node.inum;
 }
@@ -214,27 +209,24 @@ uint32_t file_write(file_s* file,uint8_t* buffer,const size_t n_bytes) {
 		printf("Invalid File Handle\n");
 		return file->iter;
 	}
-	if (file->iter+n_bytes>=BLOCK_SIZE*(NDIRECT+NINDIRECT)) {
-		printf("Cannot Exceed File Size %ld",BLOCK_SIZE*(NDIRECT+NINDIRECT));
+	// Allocate Block If Needed
+	while ((file->iter/BLOCK_SIZE)>=file->node.info->size) 
+		file->node.info->addr[file->node.info->size++]=_disk_data_alloc(file->node.dev);
+	// Write Data
+	uint8_t* data=_disk_data_get(file->node.dev,file->node.info->addr[file->iter/BLOCK_SIZE]);
+	data+=(file->iter%BLOCK_SIZE);
+	// Base Case - No Block Boundaries
+	if ((file->iter+n_bytes)/BLOCK_SIZE==file->iter/BLOCK_SIZE) {
+		// Base Case
+		memcpy(data,buffer,n_bytes);
+		file->iter+=n_bytes;
 		return file->iter;
 	}
-	// Get Data At Iterator
-	uint8_t* data;
-	// 1 - Check Direct Data Section
-	if (file->iter<(BLOCK_SIZE*NDIRECT)) 
-		data=_disk_data_get(file->node.dev,file->node.info->addr[file->iter/BLOCK_SIZE]);
-	// 2 - Check Indirect Data Section
-	else {
-		uint16_t* entry=(uint16_t*)_disk_data_get(file->node.dev,file->node.info->addr[NDIRECT]);
-		int block_no=(file->iter/BLOCK_SIZE)-NDIRECT;
-		data=_disk_data_get(file->node.dev,file->node.info->addr[block_no]);
-	}
-	// 3 - Get Offset Into Block
-	data+=(file->iter%BLOCK_SIZE);
-	// Write Data From Buffer & Increment Iterator
-	memcpy(data,buffer,n_bytes);
-	file->iter+=n_bytes;
-	return file->iter;
+	// Recursion Case - Crossing Block Boundary
+	size_t bytes_to_next_block=BLOCK_SIZE-(n_bytes%BLOCK_SIZE);
+	memcpy(data,buffer,bytes_to_next_block);
+	file->iter+=bytes_to_next_block;
+	return file_write(file,buffer+bytes_to_next_block,n_bytes-bytes_to_next_block);
 }
 // Read n Bytes From File
 uint32_t file_read(file_s* file,uint8_t* buffer,size_t n_bytes) {
@@ -243,23 +235,20 @@ uint32_t file_read(file_s* file,uint8_t* buffer,size_t n_bytes) {
 		printf("Invalid File Handle\n");
 		return 0;
 	}
-	// Get Data At Iterator
-	uint8_t* data;
-	// 1 - Check Direct Data Section
-	if (file->iter<BLOCK_SIZE*NDIRECT) 
-		data=_disk_data_get(file->node.dev,file->node.info->addr[file->iter/BLOCK_SIZE]);
-	// 2 - Check Indirect Data Section
-	else {
-		uint16_t* entry=(uint16_t*)_disk_data_get(file->node.dev,file->node.info->addr[NDIRECT]);
-		int block_no=(file->iter/BLOCK_SIZE)-NDIRECT;
-		data=_disk_data_get(file->node.dev,file->node.info->addr[block_no]);
+	// Read Data
+	uint8_t* data=_disk_data_get(file->node.dev,file->node.info->addr[file->iter/BLOCK_SIZE]);
+	// Base Case - No Block Boundaries
+	if ((file->iter+n_bytes)/BLOCK_SIZE==file->iter/BLOCK_SIZE) {
+		// Base Case
+		memcpy(buffer,data,n_bytes);
+		file->iter+=n_bytes;
+		return file->iter;
 	}
-	// 3 - Get Offset Into Block
-	data+=(file->iter%BLOCK_SIZE);
-	// Write Data Into Buffer & Increment Iterator
-	memcpy(buffer,data,n_bytes);
-	file->iter+=n_bytes;
-	return file->iter;
+	// Recursion Case - Crossing Block Boundary
+	size_t bytes_to_next_block=BLOCK_SIZE-(n_bytes%BLOCK_SIZE);
+	memcpy(buffer,data,bytes_to_next_block);
+	file->iter+=bytes_to_next_block;
+	return file_read(file,buffer+bytes_to_next_block,n_bytes-bytes_to_next_block);
 }
 // Set File Iterator Position
 bool file_seek(file_s* file,const uint32_t position) {
